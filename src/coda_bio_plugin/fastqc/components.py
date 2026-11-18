@@ -14,6 +14,7 @@ from workflow_coda.components import (
     ReportComponent,
 )
 from workflow_coda.context import RenderContext
+from workflow_coda.core.plugin import _TABLE
 from workflow_coda.errors import ArtifactUnavailableError, PluginAssetError
 
 from .figures import (
@@ -70,7 +71,58 @@ def _load_markdown_css() -> str:
         ) from exc
 
 
-FASTQC_CSS: Final[str] = _load_css()
+def _core_table_assets() -> tuple[str, str]:
+    """Read the installed core table declaration's CSS and JavaScript.
+
+    FastQC reuses private core table rendering helpers and the core table's
+    declared assets. This integration is coupled to the installed
+    workflow-coda version and must be tested when upgrading it.
+    """
+    if _TABLE.css is None or _TABLE.js is None:
+        raise PluginAssetError(
+            "workflow-coda core.table must declare CSS and JavaScript "
+            "for FastQC table integration"
+        )
+    return _TABLE.css, _TABLE.js
+
+
+def _guard_core_table_js(core_js: str) -> str:
+    """Guard the core initializer when multiple FastQC components contribute it.
+
+    The framework combines component JavaScript into one script block. Its
+    exact core contribution banner is therefore visible to each FastQC
+    contribution regardless of contribution order. If no core.table
+    contribution exists, a namespaced html marker lets the first FastQC
+    contribution initialize all tables and prevents subsequent copies from
+    initializing them again.
+    """
+    return (
+        '(function () {\n'
+        '  "use strict";\n'
+        '  document.documentElement.classList.add("coda-js");\n'
+        "  var source = document.currentScript\n"
+        "    ? document.currentScript.textContent\n"
+        '    : "";\n'
+        '  if (source.indexOf("// core.table\\n") !== -1) {\n'
+        "    return;\n"
+        "  }\n"
+        '  var marker = "data-coda-bio-fastqc-table-initialized";\n'
+        "  if (document.documentElement.hasAttribute(marker)) {\n"
+        "    return;\n"
+        "  }\n"
+        '  document.documentElement.setAttribute(marker, "true");\n'
+        f"{core_js}\n"
+        "}());"
+    )
+
+
+def _load_css_assets() -> tuple[str, str, str]:
+    core_css, core_js = _core_table_assets()
+    fastqc_css = _load_css()
+    return fastqc_css, f"{fastqc_css}\n{core_css}", _guard_core_table_js(core_js)
+
+
+FASTQC_CSS, FASTQC_TABLE_CSS, FASTQC_TABLE_JS = _load_css_assets()
 FASTQC_OVERVIEW_CSS: Final[str] = f"{FASTQC_CSS}\n{_load_markdown_css()}"
 
 
@@ -223,7 +275,7 @@ def _render_table(
     return RenderedComponent.from_html(
         '<div class="coda-bio-fastqc">'
         f"{status_badge(context, module.status)}"
-        f"{module_table_html(module, include_table)}"
+        f"{module_table_html(context, module, include_table)}"
         f"{caption_html(spec.caption)}</div>"
     )
 
@@ -274,7 +326,7 @@ def _render_chart(
     if not module.rows:
         return RenderedComponent.from_html(
             '<div class="coda-bio-fastqc">'
-            f"{badge}{module_table_html(module, spec.include_table)}"
+            f"{badge}{module_table_html(context, module, spec.include_table)}"
             f"{caption_html(spec.caption)}</div>"
         )
 
@@ -282,7 +334,11 @@ def _render_chart(
     result = RenderedComponent.from_figure(figure, description=description)
     assert result.html is not None
     metadata = module_metadata_html(module)
-    disclosure = disclosure_html(module) if spec.include_table and module.header else ""
+    disclosure = (
+        disclosure_html(context, module)
+        if spec.include_table and module.header
+        else ""
+    )
     return replace(
         result,
         html=(
@@ -409,8 +465,8 @@ FASTQC_COMPONENTS: Final[tuple[ReportComponent, ...]] = (
         description="Reported FastQC basic statistics.",
         render=render_basic_statistics,
         chrome=ComponentChrome.CARD,
-        css=FASTQC_CSS,
-        js=None,
+        css=FASTQC_TABLE_CSS,
+        js=FASTQC_TABLE_JS,
     ),
     ReportComponent(
         id="bio.fastqc_per_base_sequence_quality",
@@ -418,8 +474,8 @@ FASTQC_COMPONENTS: Final[tuple[ReportComponent, ...]] = (
         description="Reported per-base quality distributions.",
         render=render_per_base_sequence_quality,
         chrome=ComponentChrome.CARD,
-        css=FASTQC_CSS,
-        js=None,
+        css=FASTQC_TABLE_CSS,
+        js=FASTQC_TABLE_JS,
     ),
     ReportComponent(
         id="bio.fastqc_per_sequence_quality_scores",
@@ -427,8 +483,8 @@ FASTQC_COMPONENTS: Final[tuple[ReportComponent, ...]] = (
         description="Reported sequence quality counts.",
         render=render_per_sequence_quality_scores,
         chrome=ComponentChrome.CARD,
-        css=FASTQC_CSS,
-        js=None,
+        css=FASTQC_TABLE_CSS,
+        js=FASTQC_TABLE_JS,
     ),
     ReportComponent(
         id="bio.fastqc_per_base_sequence_content",
@@ -436,8 +492,8 @@ FASTQC_COMPONENTS: Final[tuple[ReportComponent, ...]] = (
         description="Reported per-base nucleotide percentages.",
         render=render_per_base_sequence_content,
         chrome=ComponentChrome.CARD,
-        css=FASTQC_CSS,
-        js=None,
+        css=FASTQC_TABLE_CSS,
+        js=FASTQC_TABLE_JS,
     ),
     ReportComponent(
         id="bio.fastqc_per_sequence_gc_content",
@@ -445,8 +501,8 @@ FASTQC_COMPONENTS: Final[tuple[ReportComponent, ...]] = (
         description="Reported sequence GC counts.",
         render=render_per_sequence_gc_content,
         chrome=ComponentChrome.CARD,
-        css=FASTQC_CSS,
-        js=None,
+        css=FASTQC_TABLE_CSS,
+        js=FASTQC_TABLE_JS,
     ),
     ReportComponent(
         id="bio.fastqc_per_base_n_content",
@@ -454,8 +510,8 @@ FASTQC_COMPONENTS: Final[tuple[ReportComponent, ...]] = (
         description="Reported per-base N percentages.",
         render=render_per_base_n_content,
         chrome=ComponentChrome.CARD,
-        css=FASTQC_CSS,
-        js=None,
+        css=FASTQC_TABLE_CSS,
+        js=FASTQC_TABLE_JS,
     ),
     ReportComponent(
         id="bio.fastqc_sequence_length_distribution",
@@ -463,8 +519,8 @@ FASTQC_COMPONENTS: Final[tuple[ReportComponent, ...]] = (
         description="Reported sequence length counts.",
         render=render_sequence_length_distribution,
         chrome=ComponentChrome.CARD,
-        css=FASTQC_CSS,
-        js=None,
+        css=FASTQC_TABLE_CSS,
+        js=FASTQC_TABLE_JS,
     ),
     ReportComponent(
         id="bio.fastqc_sequence_duplication_levels",
@@ -472,8 +528,8 @@ FASTQC_COMPONENTS: Final[tuple[ReportComponent, ...]] = (
         description="Reported sequence duplication percentages.",
         render=render_sequence_duplication_levels,
         chrome=ComponentChrome.CARD,
-        css=FASTQC_CSS,
-        js=None,
+        css=FASTQC_TABLE_CSS,
+        js=FASTQC_TABLE_JS,
     ),
     ReportComponent(
         id="bio.fastqc_overrepresented_sequences",
@@ -481,8 +537,8 @@ FASTQC_COMPONENTS: Final[tuple[ReportComponent, ...]] = (
         description="Reported overrepresented sequences.",
         render=render_overrepresented_sequences,
         chrome=ComponentChrome.CARD,
-        css=FASTQC_CSS,
-        js=None,
+        css=FASTQC_TABLE_CSS,
+        js=FASTQC_TABLE_JS,
     ),
     ReportComponent(
         id="bio.fastqc_adapter_content",
@@ -490,7 +546,7 @@ FASTQC_COMPONENTS: Final[tuple[ReportComponent, ...]] = (
         description="Reported adapter percentages by position.",
         render=render_adapter_content,
         chrome=ComponentChrome.CARD,
-        css=FASTQC_CSS,
-        js=None,
+        css=FASTQC_TABLE_CSS,
+        js=FASTQC_TABLE_JS,
     ),
 )

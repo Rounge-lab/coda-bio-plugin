@@ -10,11 +10,16 @@ import pytest
 from workflow_coda.artifact_store import ArtifactStore
 from workflow_coda.components import ComponentChrome, ComponentStatus, PlacementInfo
 from workflow_coda.context import RenderContext
+from workflow_coda.core.plugin import _TABLE
 from workflow_coda.errors import ArtifactReadError
 from workflow_coda.icons import IconLibrary, IconSource
 from workflow_coda.manifest import MANIFEST_SCHEMA_VERSION
 
-from coda_bio_plugin.fastqc.components import FASTQC_CSS
+from coda_bio_plugin.fastqc.components import (
+    FASTQC_CSS,
+    FASTQC_TABLE_CSS,
+    FASTQC_TABLE_JS,
+)
 from coda_bio_plugin.fastqc.parser import MODULE_NAMES
 from coda_bio_plugin.plugin import get_plugin
 
@@ -69,14 +74,20 @@ def test_registration() -> None:
     assert first.components[0].id == "bio.fastqc_overview"
     assert [item.title for item in first.components[1:]] == list(MODULE_NAMES)
     assert all(item.chrome is ComponentChrome.CARD for item in first.components)
+
     markdown_css = (
         resources.files("workflow_coda.core")
         .joinpath("assets", "markdown.css")
         .read_text(encoding="utf-8")
     )
     assert first.components[0].css == f"{FASTQC_CSS}\n{markdown_css}"
-    assert all(item.css == FASTQC_CSS for item in first.components[1:])
-    assert all(item.js is None for item in first.components)
+    assert first.components[0].js is None
+    assert all(item.css == FASTQC_TABLE_CSS for item in first.components[1:])
+    assert all(item.css.endswith(_TABLE.css or "") for item in first.components[1:])
+    assert all(item.js == FASTQC_TABLE_JS for item in first.components[1:])
+    assert all(item.js is not None and _TABLE.js in item.js for item in first.components[1:])
+    assert "document.currentScript.textContent" in FASTQC_TABLE_JS
+    assert 'document.documentElement.classList.add("coda-js")' in FASTQC_TABLE_JS
     assert [item.format for item in first.artifact_verifiers] == ["bio.fastqc"]
     assert first.metadata.icons_package is None
 
@@ -94,6 +105,12 @@ def test_every_registered_component_renders_by_default(
     if item.id == "bio.fastqc_basic_statistics":
         assert "<table" in result.html
         assert "VC1_1.fastq.gz" in result.html
+        assert 'class="coda-table__controls"' in result.html
+        assert "coda-table__sort-icon" in result.html
+        assert 'data-key="Measure"' in result.html
+        assert 'data-type="text"' in result.html
+        assert 'data-key="Value"' in result.html
+        assert 'data-type="text"' in result.html
     else:
         assert "<table" not in result.html
     if item.id not in {
@@ -146,10 +163,16 @@ def test_optional_table_for_chart_and_table_components(
         if id_ == "bio.fastqc_per_base_n_content":
             assert "<summary>Data table</summary>" in outcome.html
         assert "<table" in outcome.html
+        assert 'class="coda-table__controls"' in outcome.html
+        assert "coda-table__sort-icon" in outcome.html
+        assert 'data-key="Base"' in outcome.html or 'data-key="Sequence"' in outcome.html
+        assert 'data-type="numeric"' in outcome.html
         assert "ACGT" in outcome.html or id_ != "bio.fastqc_overrepresented_sequences"
     else:
         assert "<table" not in outcome.html
         assert "<summary>Data table</summary>" not in outcome.html
+        assert 'class="coda-table__controls"' not in outcome.html
+        assert "coda-table__sort-icon" not in outcome.html
         assert "ACGT" not in outcome.html
 
 
@@ -194,29 +217,6 @@ def test_overview_rejects_include_table_before_store_access(tmp_path: Path) -> N
     ctx = context(tmp_path, "not FastQC", status="failed")
     with pytest.raises(ValueError, match="bio.fastqc_overview"):
         render(ctx, "bio.fastqc_overview", {"artifact": TYPE, "include_table": True})
-
-
-def test_format_and_parse_failures(tmp_path: Path) -> None:
-    ctx = context(tmp_path, "bad", fmt="txt")
-    with pytest.raises(ValueError, match="expected 'bio.fastqc'"):
-        render(ctx, "bio.fastqc_basic_statistics", {"artifact": TYPE})
-    ctx = context(tmp_path, "bad")
-    with pytest.raises(ArtifactReadError, match="fastqc") as caught:
-        render(ctx, "bio.fastqc_basic_statistics", {"artifact": TYPE})
-    assert caught.value.__cause__ is not None
-
-
-def test_unavailable_and_missing_modules(tmp_path: Path) -> None:
-    ctx = context(tmp_path, "bad", status="failed", icons=False)
-    outcome = render(ctx, "bio.fastqc_overview", {"artifact": TYPE})
-    assert outcome.status is ComponentStatus.UNAVAILABLE
-    ctx = context(tmp_path, "##FastQC\t1\n")
-    outcome = render(ctx, "bio.fastqc_basic_statistics", {"artifact": TYPE})
-    assert outcome.status is ComponentStatus.UNAVAILABLE
-    assert outcome.message is not None
-    assert "carries no module 'Basic Statistics'" in outcome.message
-    outcome = render(ctx, "bio.fastqc_overview", {"artifact": "org.example.absent"})
-    assert outcome.status is ComponentStatus.UNAVAILABLE
 
 
 @pytest.mark.parametrize(
@@ -270,6 +270,10 @@ def test_empty_modules_table_options_and_no_plotly_import(
     assert ("<table" in outcome.html) is (include_table and has_header)
     assert ("Total Deduplicated Percentage" in outcome.html) is has_metadata
     assert ("<th scope=" in outcome.html) is (include_table and has_header)
+    if include_table and has_header:
+        assert 'class="coda-table__controls"' in outcome.html
+        assert "coda-table__sort-icon" in outcome.html
+        assert 'data-type="numeric"' in outcome.html
 
 
 @pytest.mark.parametrize(
@@ -297,6 +301,33 @@ def test_basic_statistics_always_shows_empty_notice_and_available_header(
     if has_table_header:
         assert "Measure" in outcome.html
         assert "Value" in outcome.html
+        assert 'class="coda-table__controls"' in outcome.html
+        assert "coda-table__sort-icon" in outcome.html
+        assert 'data-key="Measure"' in outcome.html
+        assert 'data-key="Value"' in outcome.html
+
+
+def test_format_and_parse_failures(tmp_path: Path) -> None:
+    ctx = context(tmp_path, "bad", fmt="txt")
+    with pytest.raises(ValueError, match="expected 'bio.fastqc'"):
+        render(ctx, "bio.fastqc_basic_statistics", {"artifact": TYPE})
+    ctx = context(tmp_path, "bad")
+    with pytest.raises(ArtifactReadError, match="fastqc") as caught:
+        render(ctx, "bio.fastqc_basic_statistics", {"artifact": TYPE})
+    assert caught.value.__cause__ is not None
+
+
+def test_unavailable_and_missing_modules(tmp_path: Path) -> None:
+    ctx = context(tmp_path, "bad", status="failed", icons=False)
+    outcome = render(ctx, "bio.fastqc_overview", {"artifact": TYPE})
+    assert outcome.status is ComponentStatus.UNAVAILABLE
+    ctx = context(tmp_path, "##FastQC\t1\n")
+    outcome = render(ctx, "bio.fastqc_basic_statistics", {"artifact": TYPE})
+    assert outcome.status is ComponentStatus.UNAVAILABLE
+    assert outcome.message is not None
+    assert "carries no module 'Basic Statistics'" in outcome.message
+    outcome = render(ctx, "bio.fastqc_overview", {"artifact": "org.example.absent"})
+    assert outcome.status is ComponentStatus.UNAVAILABLE
 
 
 def test_overview_counts_order_and_additional_modules(tmp_path: Path) -> None:
@@ -421,6 +452,9 @@ def test_escaped_complete_table_and_caption(tmp_path: Path) -> None:
     assert "&lt;a&amp;b&gt;" in outcome.html
     assert "keep &amp; this" in outcome.html
     assert "&lt;caption&gt;&amp;" in outcome.html
+    assert "Filename" in outcome.html
+    assert 'data-key="Extra &lt;header&gt;"' in outcome.html
+    assert 'data-type="text"' in outcome.html
 
 
 def test_chart_disclosure_contains_complete_escaped_table(tmp_path: Path) -> None:
@@ -441,11 +475,15 @@ def test_chart_disclosure_contains_complete_escaped_table(tmp_path: Path) -> Non
     assert "<summary>Data table</summary>" in outcome.html
     assert "Extra &lt;header&gt;" in outcome.html
     assert "&lt;a&amp;b&gt;" in outcome.html
+    assert 'class="coda-table__controls"' in outcome.html
+    assert "coda-table__sort-icon" in outcome.html
 
 
 def test_stylesheet_has_print_rules() -> None:
     assert ".coda-bio-fastqc__overview" in FASTQC_CSS
-    assert "border: 1px solid var(--coda-border);" in FASTQC_CSS
-    assert "border-left-width: 4px;" in FASTQC_CSS
     assert "@media print" in FASTQC_CSS
     assert "overflow: visible" in FASTQC_CSS
+    assert ".coda-bio-fastqc__table" not in FASTQC_CSS
+    assert ".coda-bio-fastqc__table-wrap" not in FASTQC_CSS
+    assert _TABLE.css is not None
+    assert _TABLE.css in FASTQC_TABLE_CSS

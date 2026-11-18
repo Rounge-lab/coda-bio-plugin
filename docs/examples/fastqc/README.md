@@ -25,6 +25,13 @@ a native disclosure as a non-JavaScript alternative to the chart. The
 Overrepresented Sequences component is table-only; by default, it shows the
 reported status and caption without displaying module rows.
 
+Tables use workflow-coda's core table presentation, including its filter and
+copy controls, sortable column headers, and the complete data as ordinary HTML.
+The complete headers and cells remain present and readable without JavaScript;
+sorting, filtering, and copying are progressive enhancements. Clipboard copying
+depends on the browser's clipboard support and permissions. If copying is
+unavailable, the table remains fully readable.
+
 A missing artifact or a missing module produces an unavailable notice. A
 present module with no rows instead renders successfully, with its reported
 status and an explicit empty-result message. Basic Statistics displays its

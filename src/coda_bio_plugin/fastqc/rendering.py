@@ -6,6 +6,12 @@ from typing import Final
 
 from workflow_coda.components import ComponentParameters, reject_unknown_parameters
 from workflow_coda.context import RenderContext
+from workflow_coda.core.table import (
+    _RenderedTable,
+    _assemble_markup,
+    _controls_bar,
+    _sort_icons_html,
+)
 from workflow_coda.errors import ArtifactReadError
 from workflow_coda.text import has_visible_text
 
@@ -123,20 +129,26 @@ def caption_html(caption: str | None) -> str:
     return f'<p class="coda-bio-fastqc__caption">{html.escape(caption)}</p>'
 
 
-def table_html(headers: tuple[str, ...], rows: tuple[tuple[str, ...], ...]) -> str:
-    """Render every supplied header and cell in their original order."""
+def table_html(
+    context: RenderContext,
+    headers: tuple[str, ...],
+    rows: tuple[tuple[str, ...], ...],
+) -> str:
+    """Assemble a complete table using workflow-coda's core table helpers.
+
+    This deliberately uses private core helpers so FastQC tables share the
+    installed core table's controls, sort affordances, escaping, and markup.
+    That is a version-coupled integration: test it whenever workflow-coda is
+    upgraded.
+    """
     if not headers:
         return ""
-    head = "".join(f'<th scope="col">{html.escape(header)}</th>' for header in headers)
-    body = "".join(
-        "<tr>" + "".join(f"<td>{html.escape(cell)}</td>" for cell in row) + "</tr>"
-        for row in rows
-    )
-    return (
-        '<div class="coda-bio-fastqc__table-wrap">'
-        '<table class="coda-bio-fastqc__table">'
-        f"<thead><tr>{head}</tr></thead><tbody>{body}</tbody>"
-        "</table></div>"
+    rendered = _RenderedTable(labels=headers, rows=rows)
+    return _assemble_markup(
+        rendered,
+        caption=None,
+        sort_icons=_sort_icons_html(context),
+        controls_bar=_controls_bar(context),
     )
 
 
@@ -153,9 +165,11 @@ def module_metadata_html(module: FastqcModule) -> str:
     return f'<dl class="coda-bio-fastqc__metadata">{"".join(entries)}</dl>'
 
 
-def module_table_html(module: FastqcModule, include_table: bool) -> str:
+def module_table_html(
+    context: RenderContext, module: FastqcModule, include_table: bool
+) -> str:
     """Render metadata, an optional complete table, and any empty-result notice."""
-    table = table_html(module.header, module.rows) if include_table else ""
+    table = table_html(context, module.header, module.rows) if include_table else ""
     empty = (
         '<p class="coda-bio-fastqc__empty">This module contains no data rows.</p>'
         if not module.rows
@@ -164,11 +178,11 @@ def module_table_html(module: FastqcModule, include_table: bool) -> str:
     return module_metadata_html(module) + table + empty
 
 
-def disclosure_html(module: FastqcModule) -> str:
-    """Wrap only the complete module table in a native disclosure."""
+def disclosure_html(context: RenderContext, module: FastqcModule) -> str:
+    """Wrap the complete module table in a native disclosure."""
     return (
         '<details class="coda-bio-fastqc__disclosure">'
         "<summary>Data table</summary>"
-        f"{table_html(module.header, module.rows)}"
+        f"{table_html(context, module.header, module.rows)}"
         "</details>"
     )

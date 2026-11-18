@@ -41,28 +41,6 @@
   font-weight: 600;
 }
 
-.coda-bio-fastqc__table-wrap {
-  max-width: 100%;
-  overflow-x: auto;
-}
-
-.coda-bio-fastqc__table {
-  width: 100%;
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-}
-
-.coda-bio-fastqc__table th,
-.coda-bio-fastqc__table td {
-  padding: 0.35rem 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid var(--coda-border);
-}
-
-.coda-bio-fastqc__table th {
-  border-bottom-width: 2px;
-}
-
 .coda-bio-fastqc__metadata {
   margin: 0.75rem 0;
 }
@@ -132,6 +110,13 @@
   color: var(--coda-muted);
 }
 
+/* The framework omits report.js on a single-tab page. FastQC table
+   enhancements still add coda-js, so keep the un-tabbed panel heading
+   visible rather than applying the framework's scripted-tab hiding rule. */
+.coda-js .coda-tabpanel:not([role="tabpanel"]) > h2 {
+  display: block;
+}
+
 @media print {
   .coda-bio-fastqc__disclosure,
   .coda-bio-fastqc__disclosure > * {
@@ -139,12 +124,17 @@
     content-visibility: visible;
   }
 
-  .coda-bio-fastqc__table-wrap {
-    max-width: none;
+  /* Core table markup scrolls in the framework card body. Release that
+     clipping for printed FastQC tables and let long cell text wrap. */
+  .coda-card-body:has(.coda-bio-fastqc) {
     overflow: visible;
   }
 
-  .coda-bio-fastqc__table {
+  .coda-bio-fastqc .coda-table {
+    overflow: visible;
+  }
+
+  .coda-bio-fastqc .coda-table table {
     overflow-wrap: anywhere;
   }
 }
