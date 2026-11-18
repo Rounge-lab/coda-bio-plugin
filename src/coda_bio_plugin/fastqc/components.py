@@ -131,7 +131,7 @@ def _overview_counts(context: RenderContext, counts: Counter[str], missing: int)
     return (
         '<ul class="coda-bio-fastqc__counts" '
         'aria-label="Standard module status counts">'
-        f'{"".join(items)}</ul>'
+        f"{''.join(items)}</ul>"
     )
 
 
