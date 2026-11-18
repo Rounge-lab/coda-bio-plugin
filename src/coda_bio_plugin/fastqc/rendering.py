@@ -12,6 +12,7 @@ from workflow_coda.text import has_visible_text
 from .parser import FastqcModule, FastqcParseError, FastqcReport, parse_fastqc
 
 _PARAMETERS: Final[frozenset[str]] = frozenset({"artifact", "caption"})
+_TABLE_PARAMETERS: Final[frozenset[str]] = _PARAMETERS | {"include_table"}
 
 # Icon, theme token, visible label.
 STATUS_PRESENTATION: Final[dict[str, tuple[str, str, str]]] = {
@@ -23,15 +24,22 @@ STATUS_PRESENTATION: Final[dict[str, tuple[str, str, str]]] = {
 
 @dataclass(frozen=True, slots=True)
 class RenderSpec:
-    """The two parameters accepted by every FastQC component."""
+    """The parameters accepted by a FastQC component."""
 
     artifact_type: str
     caption: str | None
+    include_table: bool
 
 
-def parse_parameters(component_id: str, parameters: ComponentParameters) -> RenderSpec:
-    """Validate the closed parameter vocabulary before accessing data."""
-    reject_unknown_parameters(component_id, parameters, _PARAMETERS)
+def parse_parameters(
+    component_id: str,
+    parameters: ComponentParameters,
+    *,
+    supports_table: bool,
+) -> RenderSpec:
+    """Validate component parameters before accessing artifact data."""
+    accepted_parameters = _TABLE_PARAMETERS if supports_table else _PARAMETERS
+    reject_unknown_parameters(component_id, parameters, accepted_parameters)
 
     def text_parameter(name: str, *, required: bool) -> str | None:
         if name not in parameters:
@@ -51,9 +59,21 @@ def parse_parameters(component_id: str, parameters: ComponentParameters) -> Rend
 
     artifact_type = text_parameter("artifact", required=True)
     assert artifact_type is not None
+
+    include_table = False
+    if supports_table and "include_table" in parameters:
+        value = parameters["include_table"]
+        if not isinstance(value, bool):
+            raise ValueError(
+                f"{component_id}: parameter 'include_table' must be a boolean, "
+                f"got {value!r}"
+            )
+        include_table = value
+
     return RenderSpec(
         artifact_type=artifact_type,
         caption=text_parameter("caption", required=False),
+        include_table=include_table,
     )
 
 
@@ -120,28 +140,33 @@ def table_html(headers: tuple[str, ...], rows: tuple[tuple[str, ...], ...]) -> s
     )
 
 
-def module_table_html(module: FastqcModule) -> str:
-    """Render module metadata, its complete table, and its empty-result notice."""
-    metadata = ""
-    if module.metadata:
-        entries = "".join(
-            f"<dt>{html.escape(key)}</dt><dd>{html.escape(value)}</dd>"
-            for key, value in module.metadata
-        )
-        metadata = f'<dl class="coda-bio-fastqc__metadata">{entries}</dl>'
+def module_metadata_html(module: FastqcModule) -> str:
+    """Render module metadata independently of its optional table."""
+    if not module.metadata:
+        return ""
+    entries = "".join(
+        f"<dt>{html.escape(key)}</dt><dd>{html.escape(value)}</dd>"
+        for key, value in module.metadata
+    )
+    return f'<dl class="coda-bio-fastqc__metadata">{entries}</dl>'
+
+
+def module_table_html(module: FastqcModule, include_table: bool) -> str:
+    """Render metadata, an optional complete table, and any empty-result notice."""
+    table = table_html(module.header, module.rows) if include_table else ""
     empty = (
         '<p class="coda-bio-fastqc__empty">This module contains no data rows.</p>'
         if not module.rows
         else ""
     )
-    return metadata + table_html(module.header, module.rows) + empty
+    return module_metadata_html(module) + table + empty
 
 
 def disclosure_html(module: FastqcModule) -> str:
-    """Ship the complete module data in a native disclosure."""
+    """Wrap only the complete module table in a native disclosure."""
     return (
         '<details class="coda-bio-fastqc__disclosure">'
         "<summary>Data table</summary>"
-        f"{module_table_html(module)}"
+        f"{table_html(module.header, module.rows)}"
         "</details>"
     )

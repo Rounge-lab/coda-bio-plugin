@@ -131,6 +131,15 @@ def test_cli_seam_all_components_and_repeated_chart(tmp_path: Path) -> None:
         f"      - id: {id_}\n"
         "        parameters:\n"
         "          artifact: org.example.fastqc\n"
+        + (
+            "          include_table: true\n"
+            if id_
+            in {
+                "bio.fastqc_basic_statistics",
+                "bio.fastqc_per_base_sequence_quality",
+            }
+            else ""
+        )
         for id_ in [*ids, "bio.fastqc_per_base_n_content"]
     )
     layout = tmp_path / "layout.yaml"
@@ -154,6 +163,6 @@ def test_cli_seam_all_components_and_repeated_chart(tmp_path: Path) -> None:
         assert page.count(f"/* {id_} */") == 1
     assert page.count('data-component="bio.fastqc_per_base_n_content"') == 2
     assert page.count('class="coda-figure"') == 9
-    assert "<summary>Data table</summary>" in page
+    assert page.count("<summary>Data table</summary>") == 1
     assert "VC1_1.fastq.gz" in page
     assert "Plotly.newPlot" in page

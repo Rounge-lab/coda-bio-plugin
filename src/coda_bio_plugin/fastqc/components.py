@@ -30,9 +30,11 @@ from .figures import (
 from .parser import MODULE_NAMES, FastqcModule, FastqcReport
 from .rendering import (
     STATUS_PRESENTATION,
+    RenderSpec,
     caption_html,
     disclosure_html,
     missing_module_message,
+    module_metadata_html,
     module_table_html,
     parse_parameters,
     read_report,
@@ -58,15 +60,21 @@ FASTQC_CSS: Final[str] = _load_css()
 
 
 def _read(
-    context: RenderContext, component_id: str, parameters: ComponentParameters
-) -> tuple[FastqcReport | None, str | None, str | None, str]:
+    context: RenderContext,
+    component_id: str,
+    parameters: ComponentParameters,
+    *,
+    supports_table: bool,
+) -> tuple[FastqcReport | None, str | None, RenderSpec]:
     """Validate first, then read; convert only missing artifacts."""
-    spec = parse_parameters(component_id, parameters)
+    spec = parse_parameters(
+        component_id, parameters, supports_table=supports_table
+    )
     try:
         report = read_report(context, component_id, spec)
     except ArtifactUnavailableError as exc:
-        return None, str(exc), spec.caption, spec.artifact_type
-    return report, None, spec.caption, spec.artifact_type
+        return None, str(exc), spec
+    return report, None, spec
 
 
 def _overview_item(context: RenderContext, name: str, status: str | None) -> str:
@@ -110,7 +118,9 @@ def render_overview(
 ) -> RenderedComponent:
     """Summarize the ten standard modules without inventing missing statuses."""
     component_id = "bio.fastqc_overview"
-    report, unavailable, caption, _ = _read(context, component_id, parameters)
+    report, unavailable, spec = _read(
+        context, component_id, parameters, supports_table=False
+    )
     if unavailable is not None:
         return RenderedComponent.unavailable(unavailable)
     assert report is not None
@@ -133,7 +143,7 @@ def render_overview(
         f'<p class="coda-bio-fastqc__counts">{summary}</p>'
         f'<ul class="coda-bio-fastqc__overview">{items}</ul>'
         f"{_additional_modules(report.modules)}"
-        f"{caption_html(caption)}</div>"
+        f"{caption_html(spec.caption)}</div>"
     )
 
 
@@ -142,20 +152,17 @@ def _module(
     component_id: str,
     parameters: ComponentParameters,
     module_name: str,
-) -> tuple[FastqcModule | None, str | None, str | None]:
-    report, unavailable, caption, artifact_type = _read(
-        context, component_id, parameters
+) -> tuple[FastqcModule | None, str | None, RenderSpec]:
+    report, unavailable, spec = _read(
+        context, component_id, parameters, supports_table=True
     )
     if unavailable is not None:
-        return None, unavailable, caption
+        return None, unavailable, spec
     assert report is not None
     module = report.find_module(module_name)
     if module is None:
-        # The spec has already been validated; reconstructing it touches no data.
-        spec = parse_parameters(component_id, parameters)
-        assert spec.artifact_type == artifact_type
-        return None, missing_module_message(component_id, spec, module_name), caption
-    return module, None, caption
+        return None, missing_module_message(component_id, spec, module_name), spec
+    return module, None, spec
 
 
 def _render_table(
@@ -164,7 +171,7 @@ def _render_table(
     component_id: str,
     module_name: str,
 ) -> RenderedComponent:
-    module, unavailable, caption = _module(
+    module, unavailable, spec = _module(
         context, component_id, parameters, module_name
     )
     if unavailable is not None:
@@ -173,8 +180,8 @@ def _render_table(
     return RenderedComponent.from_html(
         '<div class="coda-bio-fastqc">'
         f"{status_badge(context, module.status)}"
-        f"{module_table_html(module)}"
-        f"{caption_html(caption)}</div>"
+        f"{module_table_html(module, spec.include_table)}"
+        f"{caption_html(spec.caption)}</div>"
     )
 
 
@@ -205,7 +212,7 @@ def _render_chart(
     builder: FigureBuilder,
     explanation: str = "",
 ) -> RenderedComponent:
-    module, unavailable, caption = _module(
+    module, unavailable, spec = _module(
         context, component_id, parameters, module_name
     )
     if unavailable is not None:
@@ -215,17 +222,23 @@ def _render_chart(
     if not module.rows:
         return RenderedComponent.from_html(
             '<div class="coda-bio-fastqc">'
-            f"{badge}{module_table_html(module)}{caption_html(caption)}</div>"
+            f"{badge}{module_table_html(module, spec.include_table)}"
+            f"{caption_html(spec.caption)}</div>"
         )
+
     figure, description = builder(context.theme, module)
     result = RenderedComponent.from_figure(figure, description=description)
     assert result.html is not None
+    metadata = module_metadata_html(module)
+    disclosure = (
+        disclosure_html(module) if spec.include_table and module.header else ""
+    )
     return replace(
         result,
         html=(
             '<div class="coda-bio-fastqc">'
-            f"{badge}{result.html}{explanation}{disclosure_html(module)}"
-            f"{caption_html(caption)}</div>"
+            f"{badge}{metadata}{result.html}{explanation}{disclosure}"
+            f"{caption_html(spec.caption)}</div>"
         ),
     )
 

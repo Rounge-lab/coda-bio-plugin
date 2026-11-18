@@ -74,12 +74,16 @@ def test_registration() -> None:
 
 
 @pytest.mark.parametrize("item", get_plugin().components, ids=lambda item: item.id)
-def test_every_registered_component_renders(tmp_path: Path, item: Any) -> None:
+def test_every_registered_component_renders_by_default(
+    tmp_path: Path, item: Any
+) -> None:
     ctx = context(tmp_path, EXAMPLE.read_text(encoding="utf-8"))
     result = item.render(ctx, PlacementInfo(title="Ignored"), {"artifact": TYPE})
     assert result.status is ComponentStatus.OK
     assert result.html is not None
     assert "Ignored" not in result.html
+    assert "<table" not in result.html
+    assert "<summary>Data table</summary>" not in result.html
     if item.id not in {
         "bio.fastqc_overview",
         "bio.fastqc_basic_statistics",
@@ -87,7 +91,56 @@ def test_every_registered_component_renders(tmp_path: Path, item: Any) -> None:
     }:
         assert 'class="coda-figure"' in result.html
         assert 'aria-label="' in result.html
-        assert "<summary>Data table</summary>" in result.html
+
+
+@pytest.mark.parametrize(
+    ("id_", "text", "include_table"),
+    [
+        (
+            "bio.fastqc_per_base_n_content",
+            "##FastQC\t1\n"
+            ">>Per base N content\tpass\n"
+            "#Base\tN-Count\n"
+            "1\t0\n"
+            ">>END_MODULE\n",
+            False,
+        ),
+        (
+            "bio.fastqc_overrepresented_sequences",
+            "##FastQC\t1\n"
+            ">>Overrepresented sequences\tpass\n"
+            "#Sequence\tCount\tPercentage\tPossible Source\n"
+            "ACGT\t3\t1.5\tadapter\n"
+            ">>END_MODULE\n",
+            False,
+        ),
+    ],
+)
+@pytest.mark.parametrize("include_table", [False, True], ids=["disabled", "enabled"])
+def test_optional_table_for_chart_and_table_components(
+    tmp_path: Path,
+    id_: str,
+    text: str,
+    include_table: bool,
+) -> None:
+    ctx = context(tmp_path, text)
+    parameters: dict[str, Any] = {"artifact": TYPE}
+    if include_table:
+        parameters["include_table"] = True
+    outcome = render(ctx, id_, parameters)
+    assert outcome.status is ComponentStatus.OK
+    assert outcome.html is not None
+    if id_ == "bio.fastqc_per_base_n_content":
+        assert 'class="coda-figure"' in outcome.html
+    if include_table:
+        if id_ == "bio.fastqc_per_base_n_content":
+            assert "<summary>Data table</summary>" in outcome.html
+        assert "<table" in outcome.html
+        assert "ACGT" in outcome.html or id_ != "bio.fastqc_overrepresented_sequences"
+    else:
+        assert "<table" not in outcome.html
+        assert "<summary>Data table</summary>" not in outcome.html
+        assert "ACGT" not in outcome.html
 
 
 @pytest.mark.parametrize(
@@ -102,6 +155,9 @@ def test_every_registered_component_renders(tmp_path: Path, item: Any) -> None:
         {"artifact": TYPE, "caption": "  "},
         {"artifact": TYPE, "artifct": "x"},
         {"artifact": TYPE, "title": "misplaced"},
+        {"artifact": TYPE, "include_table": None},
+        {"artifact": TYPE, "include_table": "true"},
+        {"artifact": TYPE, "include_table": 1},
     ],
 )
 def test_parameter_errors_precede_store_access(
@@ -110,6 +166,12 @@ def test_parameter_errors_precede_store_access(
     ctx = context(tmp_path, "not FastQC", status="failed")
     with pytest.raises(ValueError, match="bio.fastqc_basic_statistics"):
         render(ctx, "bio.fastqc_basic_statistics", parameters)
+
+
+def test_overview_rejects_include_table_before_store_access(tmp_path: Path) -> None:
+    ctx = context(tmp_path, "not FastQC", status="failed")
+    with pytest.raises(ValueError, match="bio.fastqc_overview"):
+        render(ctx, "bio.fastqc_overview", {"artifact": TYPE, "include_table": True})
 
 
 def test_format_and_parse_failures(tmp_path: Path) -> None:
@@ -135,26 +197,57 @@ def test_unavailable_and_missing_modules(tmp_path: Path) -> None:
     assert outcome.status is ComponentStatus.UNAVAILABLE
 
 
-def test_empty_warn_and_fail_are_ok_without_plotly(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(
+    ("body", "include_table", "has_header", "has_metadata"),
+    [
+        ("", False, False, False),
+        ("", True, False, False),
+        ("#Base\tN-Count\n", False, True, False),
+        ("#Base\tN-Count\n", True, True, False),
+        (
+            "#Total Deduplicated Percentage\t62.5\n",
+            False,
+            False,
+            True,
+        ),
+        (
+            "#Total Deduplicated Percentage\t62.5\n"
+            "#Duplication Level\tPercentage of deduplicated\tPercentage of total\n",
+            True,
+            True,
+            True,
+        ),
+    ],
+)
+def test_empty_modules_table_options_and_no_plotly_import(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    body: str,
+    include_table: bool,
+    has_header: bool,
+    has_metadata: bool,
 ) -> None:
-    text = (
-        "##FastQC\t1\n"
-        ">>Per base N content\twarn\n>>END_MODULE\n"
-        ">>Overrepresented sequences\tfail\n>>END_MODULE\n"
-    )
+    if "Duplication" in body:
+        module_name = "Sequence Duplication Levels"
+        component_id = "bio.fastqc_sequence_duplication_levels"
+    else:
+        module_name = "Per base N content"
+        component_id = "bio.fastqc_per_base_n_content"
+    text = f"##FastQC\t1\n>>{module_name}\twarn\n{body}>>END_MODULE\n"
     ctx = context(tmp_path, text)
     monkeypatch.setitem(sys.modules, "plotly", None)
-    for id_, label in (
-        ("bio.fastqc_per_base_n_content", "Warn"),
-        ("bio.fastqc_overrepresented_sequences", "Fail"),
-    ):
-        outcome = render(ctx, id_, {"artifact": TYPE})
-        assert outcome.status is ComponentStatus.OK
-        assert outcome.html is not None
-        assert label in outcome.html
-        assert "This module contains no data rows." in outcome.html
-        assert "<table" not in outcome.html
+    parameters: dict[str, Any] = {"artifact": TYPE}
+    if include_table:
+        parameters["include_table"] = True
+
+    outcome = render(ctx, component_id, parameters)
+    assert outcome.status is ComponentStatus.OK
+    assert outcome.html is not None
+    assert "Warn" in outcome.html
+    assert "This module contains no data rows." in outcome.html
+    assert ("<table" in outcome.html) is (include_table and has_header)
+    assert ("Total Deduplicated Percentage" in outcome.html) is has_metadata
+    assert ("<th scope=" in outcome.html) is (include_table and has_header)
 
 
 def test_overview_counts_order_and_additional_modules(tmp_path: Path) -> None:
@@ -193,13 +286,33 @@ def test_escaped_complete_table_and_caption(tmp_path: Path) -> None:
     outcome = render(
         ctx,
         "bio.fastqc_basic_statistics",
-        {"artifact": TYPE, "caption": "<caption>&"},
+        {"artifact": TYPE, "caption": "<caption>&", "include_table": True},
     )
     assert outcome.html is not None
     assert "Extra &lt;header&gt;" in outcome.html
     assert "&lt;a&amp;b&gt;" in outcome.html
     assert "keep &amp; this" in outcome.html
     assert "&lt;caption&gt;&amp;" in outcome.html
+
+
+def test_chart_disclosure_contains_complete_escaped_table(tmp_path: Path) -> None:
+    text = (
+        "##FastQC\t1\n"
+        ">>Per base N content\tpass\n"
+        "#Base\tN-Count\tExtra <header>\n"
+        "1\t0\t<a&b>\n"
+        ">>END_MODULE\n"
+    )
+    ctx = context(tmp_path, text)
+    outcome = render(
+        ctx,
+        "bio.fastqc_per_base_n_content",
+        {"artifact": TYPE, "include_table": True},
+    )
+    assert outcome.html is not None
+    assert "<summary>Data table</summary>" in outcome.html
+    assert "Extra &lt;header&gt;" in outcome.html
+    assert "&lt;a&amp;b&gt;" in outcome.html
 
 
 def test_stylesheet_has_print_rules() -> None:
