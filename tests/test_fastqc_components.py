@@ -305,7 +305,15 @@ def test_overview_counts_order_and_additional_modules(tmp_path: Path) -> None:
     assert outcome.html is not None
     page = outcome.html
     assert "1&lt;&amp;" in page
-    assert "Pass: 1; Warn: 1; Fail: 1; Unavailable: 7" in page
+    start = page.index(
+        '<ul class="coda-bio-fastqc__counts" '
+        'aria-label="Standard module status counts">'
+    )
+    end = page.index("</ul>", start)
+    counts = page[start:end]
+    expected = ("1 Pass", "1 Warn", "1 Fail", "7 Unavailable")
+    positions = [counts.index(label) for label in expected]
+    assert positions == sorted(positions)
     assert page.count('class="coda-icon"') == 3
     assert page.index("Basic Statistics") < page.index("Per base sequence quality")
     assert page.index("Per base N content") < page.index("Adapter Content")
@@ -316,11 +324,11 @@ def test_overview_counts_order_and_additional_modules(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("status", "token", "label"),
+    ("status", "token", "label", "counts"),
     [
-        ("pass", "success", "Pass"),
-        ("warn", "warning", "Warn"),
-        ("fail", "danger", "Fail"),
+        ("pass", "success", "Pass", {"Pass": 1, "Warn": 0, "Fail": 0}),
+        ("warn", "warning", "Warn", {"Pass": 0, "Warn": 1, "Fail": 0}),
+        ("fail", "danger", "Fail", {"Pass": 0, "Warn": 0, "Fail": 1}),
     ],
 )
 def test_status_borders_keep_neutral_border_and_color_left_edge(
@@ -328,6 +336,7 @@ def test_status_borders_keep_neutral_border_and_color_left_edge(
     status: str,
     token: str,
     label: str,
+    counts: dict[str, int],
 ) -> None:
     text = (
         "##FastQC\t1\n"
@@ -354,6 +363,26 @@ def test_status_borders_keep_neutral_border_and_color_left_edge(
     assert (
         '<span class="coda-bio-fastqc__icon" '
         f'style="color: {expected_color};">'
+    ) in overview.html
+
+    for count_label, count in counts.items():
+        _, count_token, _ = {
+            "Pass": ("core-check", "success", "Pass"),
+            "Warn": ("core-info", "warning", "Warn"),
+            "Fail": ("core-warning", "danger", "Fail"),
+        }[count_label]
+        count_color = ctx.theme.colors[count_token]
+        assert (
+            '<li class="coda-bio-fastqc__count" '
+            f'style="border-left-color: {count_color};">'
+            f'<span class="coda-bio-fastqc__count-value">{count}</span> '
+            f"{count_label}</li>"
+        ) in overview.html
+    assert (
+        '<li class="coda-bio-fastqc__count '
+        'coda-bio-fastqc__count--unavailable">'
+        '<span class="coda-bio-fastqc__count-value">9</span> '
+        "Unavailable</li>"
     ) in overview.html
 
     unavailable_item = overview.html.split(

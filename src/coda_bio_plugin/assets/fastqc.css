@@ -90,10 +90,39 @@
   outline-offset: 2px;
 }
 
+.coda-bio-fastqc__counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0.75rem 0;
+  padding: 0;
+}
+
+.coda-bio-fastqc__count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid var(--coda-border);
+  border-left-width: 4px;
+  border-radius: 4px;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+.coda-bio-fastqc__count-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.coda-bio-fastqc__count--unavailable {
+  color: var(--coda-muted);
+}
+
 .coda-bio-fastqc__caption,
 .coda-bio-fastqc__explanation,
-.coda-bio-fastqc__empty,
-.coda-bio-fastqc__counts {
+.coda-bio-fastqc__empty {
   margin: 0.75rem 0;
   color: var(--coda-muted);
 }

@@ -96,6 +96,30 @@ def _overview_item(context: RenderContext, name: str, status: str | None) -> str
     )
 
 
+def _overview_counts(context: RenderContext, counts: Counter[str], missing: int) -> str:
+    items = []
+    for status in ("pass", "warn", "fail"):
+        _, token, label = STATUS_PRESENTATION[status]
+        color = html.escape(context.theme.colors[token], quote=True)
+        items.append(
+            '<li class="coda-bio-fastqc__count" '
+            f'style="border-left-color: {color};">'
+            f'<span class="coda-bio-fastqc__count-value">{counts[status]}</span> '
+            f"{html.escape(label)}</li>"
+        )
+    items.append(
+        '<li class="coda-bio-fastqc__count '
+        'coda-bio-fastqc__count--unavailable">'
+        f'<span class="coda-bio-fastqc__count-value">{missing}</span> '
+        "Unavailable</li>"
+    )
+    return (
+        '<ul class="coda-bio-fastqc__counts" '
+        'aria-label="Standard module status counts">'
+        f'{"".join(items)}</ul>'
+    )
+
+
 def _additional_modules(modules: tuple[FastqcModule, ...]) -> str:
     additional = [module for module in modules if module.name not in MODULE_NAMES]
     if not additional:
@@ -131,15 +155,11 @@ def render_overview(
         _overview_item(context, name, modules[name].status if name in modules else None)
         for name in MODULE_NAMES
     )
-    summary = (
-        f"Pass: {counts['pass']}; Warn: {counts['warn']}; "
-        f"Fail: {counts['fail']}; Unavailable: {missing}"
-    )
     return RenderedComponent.from_html(
         '<div class="coda-bio-fastqc">'
         f"<p>FastQC version: {html.escape(report.version)}</p>"
         f'<ul class="coda-bio-fastqc__overview">{items}</ul>'
-        f'<p class="coda-bio-fastqc__counts">{summary}</p>'
+        f"{_overview_counts(context, counts, missing)}"
         f"{_additional_modules(report.modules)}"
         f"{caption_html(spec.caption)}</div>"
     )
@@ -435,8 +455,7 @@ FASTQC_COMPONENTS: Final[tuple[ReportComponent, ...]] = (
         title="Sequence Duplication Levels",
         description="Reported sequence duplication percentages.",
         render=render_sequence_duplication_levels,
-        chrome=ComponentChrome.CARD,
-        css=FASTQC_CSS,
+        chrome=FASTQC_CSS,
         js=None,
     ),
     ReportComponent(
