@@ -97,7 +97,7 @@ def _guard_core_table_js(core_js: str) -> str:
     initializing them again.
     """
     return (
-        '(function () {\n'
+        "(function () {\n"
         '  "use strict";\n'
         '  document.documentElement.classList.add("coda-js");\n'
         "  var source = document.currentScript\n"
@@ -335,9 +335,7 @@ def _render_chart(
     assert result.html is not None
     metadata = module_metadata_html(module)
     disclosure = (
-        disclosure_html(context, module)
-        if spec.include_table and module.header
-        else ""
+        disclosure_html(context, module) if spec.include_table and module.header else ""
     )
     return replace(
         result,

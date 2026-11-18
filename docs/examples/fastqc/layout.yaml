@@ -30,9 +30,11 @@ tabs:
           - id: bio.fastqc_per_sequence_gc_content
             parameters:
               artifact: org.example.fastqc
+              include_table: true
           - id: bio.fastqc_per_base_n_content
             parameters:
               artifact: org.example.fastqc
+              include_table: true
           - id: bio.fastqc_sequence_length_distribution
             parameters:
               artifact: org.example.fastqc
