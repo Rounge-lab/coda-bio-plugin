@@ -7,15 +7,24 @@ Artifact format
 FastQC artifacts use the ``bio.fastqc`` format and contain UTF-8 text in the
 FastQC ``fastqc_data.txt`` structure: a ``##FastQC`` version header followed
 by module sections, each with a name, a ``pass``, ``warn``, or ``fail``
-status, a body, and an ``>>END_MODULE`` terminator.
+status, a body, and a ``>>END_MODULE`` terminator.
 
-| Aspect | Behavior |
-|---|---|
-| Structure | The version header and module boundaries are checked. Duplicate module names, invalid statuses, incomplete sections, and content outside a module are rejected. |
-| Recognized modules | Headers, row widths, and supported numeric values are validated. Additional columns are permitted when the required columns are present. |
-| Unknown modules | Retained as opaque content; they do not invalidate an otherwise readable report. |
-| Verification | The default requires all ten standard modules listed below. The ``required_modules`` criterion can select a subset, including an empty set. |
-| Result status | ``warn`` and ``fail`` are valid FastQC results, not verification failures. Verification checks supported structure and completeness, not biological quality. |
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Aspect
+     - Behavior
+   * - Structure
+     - The version header and module boundaries are checked. Duplicate module names, invalid statuses, incomplete sections, and content outside a module are rejected.
+   * - Recognized modules
+     - Headers, row widths, and supported numeric values are validated. Additional columns are permitted when the required columns are present.
+   * - Unknown modules
+     - Retained as opaque content; they do not invalidate an otherwise readable report.
+   * - Verification
+     - The default requires all ten standard modules listed below. The ``required_modules`` criterion can select a subset, including an empty set.
+   * - Result status
+     - ``warn`` and ``fail`` are valid FastQC results, not verification failures. Verification checks supported structure and completeness, not biological quality.
 
 The standard modules, in their report order, are:
 
@@ -40,31 +49,46 @@ Components
 All components use the ``bio.fastqc_`` prefix. Each requires an artifact whose
 manifest format is ``bio.fastqc``.
 
-+-----------------------------------------------+--------------------------------+-------------------------+
-| Component ID                                  | FastQC module                  | Output                  |
-+===============================================+================================+=========================+
-| ``bio.fastqc_overview``                       | All standard modules           | Status overview         |
-+-----------------------------------------------+--------------------------------+-------------------------+
-| ``bio.fastqc_basic_statistics``               | Basic Statistics               | Table                   |
-+-----------------------------------------------+--------------------------------+-------------------------+
-| ``bio.fastqc_per_base_sequence_quality``      | Per base sequence quality      | Chart                   |
-+-----------------------------------------------+--------------------------------+-------------------------+
-| ``bio.fastqc_per_sequence_quality_scores``    | Per sequence quality scores    | Chart                   |
-+-----------------------------------------------+--------------------------------+-------------------------+
-| ``bio.fastqc_per_base_sequence_content``      | Per base sequence content      | Chart                   |
-+-----------------------------------------------+--------------------------------+-------------------------+
-| ``bio.fastqc_per_sequence_gc_content``        | Per sequence GC content        | Chart                   |
-+-----------------------------------------------+--------------------------------+-------------------------+
-| ``bio.fastqc_per_base_n_content``             | Per base N content             | Chart                   |
-+-----------------------------------------------+--------------------------------+-------------------------+
-| ``bio.fastqc_sequence_length_distribution``   | Sequence Length Distribution   | Chart                   |
-+-----------------------------------------------+--------------------------------+-------------------------+
-| ``bio.fastqc_sequence_duplication_levels``    | Sequence Duplication Levels    | Chart                   |
-+-----------------------------------------------+--------------------------------+-------------------------+
-| ``bio.fastqc_overrepresented_sequences``      | Overrepresented sequences      | Table                   |
-+-----------------------------------------------+--------------------------------+-------------------------+
-| ``bio.fastqc_adapter_content``                | Adapter Content                | Chart                   |
-+-----------------------------------------------+--------------------------------+-------------------------+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 40 25
+
+   * - Component ID
+     - FastQC module
+     - Output
+   * - ``bio.fastqc_overview``
+     - All standard modules
+     - Status overview
+   * - ``bio.fastqc_basic_statistics``
+     - Basic Statistics
+     - Table
+   * - ``bio.fastqc_per_base_sequence_quality``
+     - Per base sequence quality
+     - Chart
+   * - ``bio.fastqc_per_sequence_quality_scores``
+     - Per sequence quality scores
+     - Chart
+   * - ``bio.fastqc_per_base_sequence_content``
+     - Per base sequence content
+     - Chart
+   * - ``bio.fastqc_per_sequence_gc_content``
+     - Per sequence GC content
+     - Chart
+   * - ``bio.fastqc_per_base_n_content``
+     - Per base N content
+     - Chart
+   * - ``bio.fastqc_sequence_length_distribution``
+     - Sequence Length Distribution
+     - Chart
+   * - ``bio.fastqc_sequence_duplication_levels``
+     - Sequence Duplication Levels
+     - Chart
+   * - ``bio.fastqc_overrepresented_sequences``
+     - Overrepresented sequences
+     - Table
+   * - ``bio.fastqc_adapter_content``
+     - Adapter Content
+     - Chart
 
 Parameters
 ----------
@@ -84,27 +108,24 @@ default. Basic Statistics always renders its table and rejects
 Output behavior
 ---------------
 
-+----------------------+--------------------------------------------------------------------+
-| Situation            | Behavior                                                           |
-+======================+====================================================================+
-| Artifact unavailable | The component returns an unavailable outcome with the store's      |
-|                      | explanation.                                                       |
-+----------------------+--------------------------------------------------------------------+
-| Module missing       | Its individual component returns an unavailable outcome. The       |
-|                      | overview instead lists the module as unavailable.                  |
-+----------------------+--------------------------------------------------------------------+
-| Module present,      | The component renders successfully, shows its reported status,     |
-| with no data rows    | and displays an empty-result message. A table header is rendered  |
-|                      | when available and applicable.                                     |
-+----------------------+--------------------------------------------------------------------+
-| FastQC status        | ``pass``, ``warn``, and ``fail`` are displayed as Pass, Warn, and   |
-|                      | Fail. They are FastQC results, not report-builder errors.          |
-+----------------------+--------------------------------------------------------------------+
-| Tables               | Tables contain the complete supplied module data. Chart tables are |
-|                      | included only when ``include_table: true``.                         |
-+----------------------+--------------------------------------------------------------------+
-| Caption              | Optional visible text is rendered with the component content.      |
-+----------------------+--------------------------------------------------------------------+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Situation
+     - Behavior
+   * - Artifact unavailable
+     - The component returns an unavailable outcome with the store's explanation.
+   * - Module missing
+     - Its individual component returns an unavailable outcome. The overview instead lists the module as unavailable.
+   * - Module present, with no data rows
+     - The component renders successfully, shows its reported status, and displays an empty-result message. A table header is rendered when available and applicable.
+   * - FastQC status
+     - ``pass``, ``warn``, and ``fail`` are displayed as Pass, Warn, and Fail. They are FastQC results, not report-builder errors.
+   * - Tables
+     - Tables contain the complete supplied module data. Chart tables are included only when ``include_table: true``.
+   * - Caption
+     - Optional visible text is rendered with the component content.
 
 For further details about workflow-coda manifest and placement behavior, see
 its `manifest production guide <https://github.com/sverre-branders/workflow-coda/blob/main/docs/source/user/how-to/producing-manifests.rst>`_
