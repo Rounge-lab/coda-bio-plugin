@@ -108,8 +108,8 @@ def build_per_base_sequence_quality(
             upperfence=upper,
             boxpoints=False,
             name="Quality percentiles",
-            marker={"color": theme.text_on(theme.colors["surface"])},
-            line={"color": theme.text_on(theme.colors["surface"])},
+            line={"color": theme.text_on(theme.colors["surface"]), "width": 1.2},
+            fillcolor="rgba(0, 0, 0, 0)",
         )
     )
     figure.add_trace(
@@ -157,7 +157,14 @@ def _bar(
     x: list[str] | list[float]
     x = _labels(module, x_column) if categorical else _numbers(module, x_column)
     y = _numbers(module, y_column)
-    figure = go.Figure(go.Bar(x=x, y=y, marker={"color": _status_color(theme, module)}))
+    figure = go.Figure(
+        go.Bar(
+            x=x,
+            y=y,
+            marker={"color": _status_color(theme, module), "line_width": 0},
+        )
+    )
+    figure.update_layout(bargap=0, bargroupgap=0)
     _style(figure, theme, x_column, "Percent" if not count else y_column)
     if categorical:
         figure.update_xaxes(type="category", categoryorder="array", categoryarray=x)
@@ -238,7 +245,7 @@ def build_sequence_duplication_levels(
                 x=labels,
                 y=_numbers(module, name),
                 name=html.escape(name),
-                marker={"color": theme.series[index]},
+                marker={"color": theme.series[index], "line_width": 0},
             )
         )
     _style(figure, theme, "Duplication Level", "Percent")
@@ -267,7 +274,10 @@ def _heatmap(
             z=[_numbers(module, name) for name in names],
             zmin=0,
             zmax=100,
-            colorscale=[[0, theme.colors["surface"]], [1, theme.colors["primary"]]],
+            colorscale=[
+                [0, theme.colors["surface"]],
+                [1, _status_color(theme, module)],
+            ],
             colorbar={"title": {"text": "Percent"}},
             hovertemplate="Series: %{y}<br>Bin: %{x}<br>Percent: %{z}<extra></extra>",
         )

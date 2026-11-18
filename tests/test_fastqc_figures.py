@@ -2,6 +2,7 @@
 
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -80,7 +81,7 @@ def test_heatmap_and_grouped_bars() -> None:
     assert list(trace["y"]) == ["G", "A", "T", "C"]
     assert trace["zmin"] == 0 and trace["zmax"] == 100
     assert trace["colorscale"][0][1] == DEFAULT_THEME.colors["surface"]
-    assert trace["colorscale"][-1][1] == DEFAULT_THEME.colors["primary"]
+    assert trace["colorscale"][-1][1] == DEFAULT_THEME.colors["success"]
     assert "4 series: G, A, T, C" in description
 
     duplication = module("Sequence Duplication Levels")
@@ -94,6 +95,40 @@ def test_heatmap_and_grouped_bars() -> None:
     assert payload["data"][0]["marker"]["color"] == DEFAULT_THEME.series[0]
     assert payload["data"][1]["marker"]["color"] == DEFAULT_THEME.series[1]
     assert "2 series" in description
+
+
+@pytest.mark.parametrize(
+    ("module_name", "builder"),
+    [
+        (
+            "Per base sequence content",
+            figures.build_per_base_sequence_content,
+        ),
+        ("Adapter Content", figures.build_adapter_content),
+    ],
+    ids=["per-base-sequence-content", "adapter-content"],
+)
+@pytest.mark.parametrize(
+    ("status", "color_token"),
+    [
+        ("pass", "success"),
+        ("warn", "warning"),
+        ("fail", "danger"),
+    ],
+)
+def test_heatmap_colors_follow_reported_status(
+    module_name: str,
+    builder: Any,
+    status: str,
+    color_token: str,
+) -> None:
+    data = replace(module(module_name), status=status)
+
+    figure, _ = builder(DEFAULT_THEME, data)
+
+    trace = figure.to_plotly_json()["data"][0]
+    assert trace["colorscale"][0][1] == DEFAULT_THEME.colors["surface"]
+    assert trace["colorscale"][-1][1] == DEFAULT_THEME.colors[color_token]
 
 
 def test_missing_plotly_teaches(monkeypatch: pytest.MonkeyPatch) -> None:
