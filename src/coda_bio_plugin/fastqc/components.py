@@ -88,7 +88,7 @@ def _overview_item(context: RenderContext, name: str, status: str | None) -> str
     color = html.escape(context.theme.colors[token], quote=True)
     return (
         '<li class="coda-bio-fastqc__overview-item" '
-        f'style="border-color: {color};">'
+        f'style="border-left-color: {color};">'
         f"<span>{html.escape(name)}</span>"
         '<span class="coda-bio-fastqc__overview-status">'
         f'<span class="coda-bio-fastqc__icon" style="color: {color};">'

@@ -315,6 +315,55 @@ def test_overview_counts_order_and_additional_modules(tmp_path: Path) -> None:
         assert ctx.icons.load(icon).markup in page
 
 
+@pytest.mark.parametrize(
+    ("status", "token", "label"),
+    [
+        ("pass", "success", "Pass"),
+        ("warn", "warning", "Warn"),
+        ("fail", "danger", "Fail"),
+    ],
+)
+def test_status_borders_keep_neutral_border_and_color_left_edge(
+    tmp_path: Path,
+    status: str,
+    token: str,
+    label: str,
+) -> None:
+    text = (
+        "##FastQC\t1\n"
+        f">>Basic Statistics\t{status}\n"
+        ">>END_MODULE\n"
+    )
+    ctx = context(tmp_path, text)
+    expected_color = ctx.theme.colors[token]
+    expected_left_border = f"border-left-color: {expected_color};"
+
+    badge = render(ctx, "bio.fastqc_basic_statistics", {"artifact": TYPE})
+    assert badge.html is not None
+    assert (
+        '<span class="coda-bio-fastqc__status" '
+        f'style="{expected_left_border}">{label}</span>'
+    ) in badge.html
+
+    overview = render(ctx, "bio.fastqc_overview", {"artifact": TYPE})
+    assert overview.html is not None
+    assert (
+        '<li class="coda-bio-fastqc__overview-item" '
+        f'style="{expected_left_border}">'
+    ) in overview.html
+    assert (
+        '<span class="coda-bio-fastqc__icon" '
+        f'style="color: {expected_color};">'
+    ) in overview.html
+
+    unavailable_item = overview.html.split(
+        '<li class="coda-bio-fastqc__overview-item '
+        'coda-bio-fastqc__overview-item--unavailable">',
+        maxsplit=1,
+    )[1].split("</li>", maxsplit=1)[0]
+    assert "style=" not in unavailable_item
+
+
 def test_escaped_complete_table_and_caption(tmp_path: Path) -> None:
     text = (
         "##FastQC\t1\n"
@@ -358,5 +407,7 @@ def test_chart_disclosure_contains_complete_escaped_table(tmp_path: Path) -> Non
 
 def test_stylesheet_has_print_rules() -> None:
     assert ".coda-bio-fastqc__overview" in FASTQC_CSS
+    assert "border: 1px solid var(--coda-border);" in FASTQC_CSS
+    assert "border-left-width: 4px;" in FASTQC_CSS
     assert "@media print" in FASTQC_CSS
     assert "overflow: visible" in FASTQC_CSS

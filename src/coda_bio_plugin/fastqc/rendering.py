@@ -112,7 +112,7 @@ def status_badge(context: RenderContext, status: str) -> str:
     color = html.escape(context.theme.colors[token], quote=True)
     return (
         '<span class="coda-bio-fastqc__status" '
-        f'style="border-color: {color};">{html.escape(label)}</span>'
+        f'style="border-left-color: {color};">{html.escape(label)}</span>'
     )
 
 
