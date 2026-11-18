@@ -106,7 +106,8 @@ warn_redundant_casts = true
 warn_unreachable = true
 
 [[tool.mypy.overrides]]
-module = ["plotly", "plotly.*"]
+# TODO: add py.typed to workflow-coda
+module = ["plotly", "plotly.*", "workflow_coda", "workflow_coda.*"]
 ignore_missing_imports = true
 
 [tool.pixi.workspace]
@@ -129,14 +130,14 @@ docs = { features = ["docs"], solve-group = "docs" }
 
 [tool.pixi.tasks]
 build = "python -m build"
-pytest = "pytest --cov=coda_bio_plugin --cov-report=term-missing"
+pytest = "python -m pytest --cov=coda_bio_plugin --cov-report=term-missing"
 ruff-check = "ruff check ."
 ruff-check-fix = "ruff check . --fix"
 ruff-format = "ruff format ."
 ruff-format-check = "ruff format --check ."
 pre-commit = "pre-commit run --all-files"
 pre-commit-install = "pre-commit install --install-hooks"
-typecheck = "mypy"
+typecheck = "python -m mypy"
 lint = { depends-on = ["ruff-check", "ruff-format-check"] }
 lint-fix = { depends-on = ["ruff-format", "ruff-check-fix"] }
 test = { depends-on = ["lint", "typecheck", "pytest"] }
