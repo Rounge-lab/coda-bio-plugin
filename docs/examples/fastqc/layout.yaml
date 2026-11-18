@@ -1,0 +1,41 @@
+schema_version: "0.3.0"
+title: FastQC example
+tabs:
+  - title: FastQC
+    components:
+      - id: bio.fastqc_overview
+        parameters:
+          artifact: org.example.fastqc
+      - id: bio.fastqc_basic_statistics
+        parameters:
+          artifact: org.example.fastqc
+      - id: bio.fastqc_per_base_sequence_quality
+        parameters:
+          artifact: org.example.fastqc
+      - id: bio.fastqc_per_sequence_quality_scores
+        parameters:
+          artifact: org.example.fastqc
+      - id: bio.fastqc_per_base_sequence_content
+        parameters:
+          artifact: org.example.fastqc
+      - id: bio.fastqc_per_sequence_gc_content
+        parameters:
+          artifact: org.example.fastqc
+      - id: bio.fastqc_per_base_n_content
+        parameters:
+          artifact: org.example.fastqc
+      - id: bio.fastqc_sequence_length_distribution
+        parameters:
+          artifact: org.example.fastqc
+      - id: bio.fastqc_sequence_duplication_levels
+        parameters:
+          artifact: org.example.fastqc
+      - id: bio.fastqc_overrepresented_sequences
+        parameters:
+          artifact: org.example.fastqc
+      - id: bio.fastqc_adapter_content
+        parameters:
+          artifact: org.example.fastqc
+  - title: Diagnostics
+    components:
+      - type: diagnostics
