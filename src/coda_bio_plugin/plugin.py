@@ -17,8 +17,7 @@ def get_plugin() -> ReportPlugin:
                 "Officially supported workflow-coda components, specifically "
                 "for the field of bioinformatics."
             ),
-            supported_schema_versions=frozenset({SUPPORTED_MANIFEST_SCHEMA_VERSIONS}),
-            icons_package="coda-bio-plugin",
+            supported_schema_versions=frozenset(SUPPORTED_MANIFEST_SCHEMA_VERSIONS),
         ),
         components=(),
         artifact_verifiers=(),
