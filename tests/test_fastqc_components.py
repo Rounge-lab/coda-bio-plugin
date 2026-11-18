@@ -166,9 +166,7 @@ def test_parameter_errors_precede_store_access(
     tmp_path: Path, parameters: dict[str, Any]
 ) -> None:
     ctx = context(tmp_path, "not FastQC", status="failed")
-    with pytest.raises(
-        ValueError, match="bio.fastqc_overrepresented_sequences"
-    ):
+    with pytest.raises(ValueError, match="bio.fastqc_overrepresented_sequences"):
         render(ctx, "bio.fastqc_overrepresented_sequences", parameters)
 
 
@@ -243,7 +241,7 @@ def test_empty_modules_table_options_and_no_plotly_import(
     has_header: bool,
     has_metadata: bool,
 ) -> None:
-    if "Duplication" in body:
+    if has_metadata:
         module_name = "Sequence Duplication Levels"
         component_id = "bio.fastqc_sequence_duplication_levels"
     else:
