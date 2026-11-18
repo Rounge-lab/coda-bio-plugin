@@ -2,6 +2,7 @@
 
 import json
 import sys
+from importlib import resources
 from pathlib import Path
 from typing import Any
 
@@ -68,7 +69,14 @@ def test_registration() -> None:
     assert first.components[0].id == "bio.fastqc_overview"
     assert [item.title for item in first.components[1:]] == list(MODULE_NAMES)
     assert all(item.chrome is ComponentChrome.CARD for item in first.components)
-    assert all(item.css == FASTQC_CSS and item.js is None for item in first.components)
+    markdown_css = (
+        resources.files("workflow_coda.core")
+        .joinpath("assets", "markdown.css")
+        .read_text(encoding="utf-8")
+    )
+    assert first.components[0].css == f"{FASTQC_CSS}\n{markdown_css}"
+    assert all(item.css == FASTQC_CSS for item in first.components[1:])
+    assert all(item.js is None for item in first.components)
     assert [item.format for item in first.artifact_verifiers] == ["bio.fastqc"]
     assert first.metadata.icons_package is None
 
@@ -305,6 +313,7 @@ def test_overview_counts_order_and_additional_modules(tmp_path: Path) -> None:
     assert outcome.html is not None
     page = outcome.html
     assert "1&lt;&amp;" in page
+    assert '<div class="coda-prose"><div><hr></div></div>' in page
     start = page.index(
         '<ul class="coda-bio-fastqc__counts" '
         'aria-label="Standard module status counts">'
@@ -358,7 +367,7 @@ def test_status_borders_keep_neutral_border_and_color_left_edge(
     assert overview.html is not None
     assert (
         '<li class="coda-bio-fastqc__overview-item" '
-        f'style="{expected_left_border}">'
+        f'style="border-left-color: {expected_color};">'
     ) in overview.html
     assert (
         '<span class="coda-bio-fastqc__icon" '

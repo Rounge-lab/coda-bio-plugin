@@ -56,7 +56,22 @@ def _load_css() -> str:
         ) from exc
 
 
+def _load_markdown_css() -> str:
+    try:
+        return (
+            resources.files("workflow_coda.core")
+            .joinpath("assets", "markdown.css")
+            .read_text(encoding="utf-8")
+        )
+    except (OSError, UnicodeError) as exc:
+        raise PluginAssetError(
+            "workflow-coda core asset 'assets/markdown.css' is missing or unreadable "
+            "— reinstall workflow-coda"
+        ) from exc
+
+
 FASTQC_CSS: Final[str] = _load_css()
+FASTQC_OVERVIEW_CSS: Final[str] = f"{FASTQC_CSS}\n{_load_markdown_css()}"
 
 
 def _read(
@@ -158,8 +173,9 @@ def render_overview(
     return RenderedComponent.from_html(
         '<div class="coda-bio-fastqc">'
         f"<p>FastQC version: {html.escape(report.version)}</p>"
-        f'<ul class="coda-bio-fastqc__overview">{items}</ul>'
         f"{_overview_counts(context, counts, missing)}"
+        '<div class="coda-prose"><div><hr></div></div>'
+        f'<ul class="coda-bio-fastqc__overview">{items}</ul>'
         f"{_additional_modules(report.modules)}"
         f"{caption_html(spec.caption)}</div>"
     )
@@ -384,7 +400,7 @@ FASTQC_COMPONENTS: Final[tuple[ReportComponent, ...]] = (
         description="Reported FastQC module statuses.",
         render=render_overview,
         chrome=ComponentChrome.CARD,
-        css=FASTQC_CSS,
+        css=FASTQC_OVERVIEW_CSS,
         js=None,
     ),
     ReportComponent(
@@ -455,7 +471,8 @@ FASTQC_COMPONENTS: Final[tuple[ReportComponent, ...]] = (
         title="Sequence Duplication Levels",
         description="Reported sequence duplication percentages.",
         render=render_sequence_duplication_levels,
-        chrome=FASTQC_CSS,
+        chrome=ComponentChrome.CARD,
+        css=FASTQC_CSS,
         js=None,
     ),
     ReportComponent(
