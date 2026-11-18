@@ -67,7 +67,9 @@ def _read(
     supports_table: bool,
 ) -> tuple[FastqcReport | None, str | None, RenderSpec]:
     """Validate first, then read; convert only missing artifacts."""
-    spec = parse_parameters(component_id, parameters, supports_table=supports_table)
+    spec = parse_parameters(
+        component_id, parameters, supports_table=supports_table
+    )
     try:
         report = read_report(context, component_id, spec)
     except ArtifactUnavailableError as exc:
@@ -150,9 +152,11 @@ def _module(
     component_id: str,
     parameters: ComponentParameters,
     module_name: str,
+    *,
+    supports_table: bool,
 ) -> tuple[FastqcModule | None, str | None, RenderSpec]:
     report, unavailable, spec = _read(
-        context, component_id, parameters, supports_table=True
+        context, component_id, parameters, supports_table=supports_table
     )
     if unavailable is not None:
         return None, unavailable, spec
@@ -168,15 +172,24 @@ def _render_table(
     parameters: ComponentParameters,
     component_id: str,
     module_name: str,
+    *,
+    supports_table: bool,
 ) -> RenderedComponent:
-    module, unavailable, spec = _module(context, component_id, parameters, module_name)
+    module, unavailable, spec = _module(
+        context,
+        component_id,
+        parameters,
+        module_name,
+        supports_table=supports_table,
+    )
     if unavailable is not None:
         return RenderedComponent.unavailable(unavailable)
     assert module is not None
+    include_table = True if module_name == "Basic Statistics" else spec.include_table
     return RenderedComponent.from_html(
         '<div class="coda-bio-fastqc">'
         f"{status_badge(context, module.status)}"
-        f"{module_table_html(module, spec.include_table)}"
+        f"{module_table_html(module, include_table)}"
         f"{caption_html(spec.caption)}</div>"
     )
 
@@ -185,7 +198,11 @@ def render_basic_statistics(
     context: RenderContext, _info: PlacementInfo, parameters: ComponentParameters
 ) -> RenderedComponent:
     return _render_table(
-        context, parameters, "bio.fastqc_basic_statistics", "Basic Statistics"
+        context,
+        parameters,
+        "bio.fastqc_basic_statistics",
+        "Basic Statistics",
+        supports_table=False,
     )
 
 
@@ -197,6 +214,7 @@ def render_overrepresented_sequences(
         parameters,
         "bio.fastqc_overrepresented_sequences",
         "Overrepresented sequences",
+        supports_table=True,
     )
 
 
@@ -208,7 +226,13 @@ def _render_chart(
     builder: FigureBuilder,
     explanation: str = "",
 ) -> RenderedComponent:
-    module, unavailable, spec = _module(context, component_id, parameters, module_name)
+    module, unavailable, spec = _module(
+        context,
+        component_id,
+        parameters,
+        module_name,
+        supports_table=True,
+    )
     if unavailable is not None:
         return RenderedComponent.unavailable(unavailable)
     assert module is not None
@@ -224,7 +248,9 @@ def _render_chart(
     result = RenderedComponent.from_figure(figure, description=description)
     assert result.html is not None
     metadata = module_metadata_html(module)
-    disclosure = disclosure_html(module) if spec.include_table and module.header else ""
+    disclosure = (
+        disclosure_html(module) if spec.include_table and module.header else ""
+    )
     return replace(
         result,
         html=(

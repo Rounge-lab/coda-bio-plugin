@@ -133,11 +133,7 @@ def test_cli_seam_all_components_and_repeated_chart(tmp_path: Path) -> None:
         "          artifact: org.example.fastqc\n"
         + (
             "          include_table: true\n"
-            if id_
-            in {
-                "bio.fastqc_basic_statistics",
-                "bio.fastqc_per_base_sequence_quality",
-            }
+            if id_ == "bio.fastqc_per_base_sequence_quality"
             else ""
         )
         for id_ in [*ids, "bio.fastqc_per_base_n_content"]

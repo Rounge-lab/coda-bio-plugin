@@ -16,20 +16,22 @@ Every FastQC component accepts two parameters:
 
 Both values must be strings containing visible text; null is not accepted.
 
-All ten module components additionally accept `include_table` (optional
-boolean, default `false`). The FastQC overview does not accept this parameter.
-When enabled, the component includes the complete HTML table for its module.
-For chart components, this table appears in a native disclosure as a
-non-JavaScript alternative to the chart. The Basic Statistics and
-Overrepresented Sequences components are table-only; by default, they show
-the reported status and caption without displaying module rows.
+Basic Statistics always displays its complete module table when a header is
+present and does not accept `include_table`. The other nine module components
+accept `include_table` (optional boolean, default `false`). The FastQC overview
+does not accept this parameter. When enabled, a module component includes the
+complete HTML table for its module. For chart components, this table appears in
+a native disclosure as a non-JavaScript alternative to the chart. The
+Overrepresented Sequences component is table-only; by default, it shows the
+reported status and caption without displaying module rows.
 
 A missing artifact or a missing module produces an unavailable notice. A
 present module with no rows instead renders successfully, with its reported
-status and an explicit empty-result message. If a header is present, enabling
-`include_table` also displays that empty table. In particular, an empty
-overrepresented-sequences table does not establish a general absence of
-contamination.
+status and an explicit empty-result message. Basic Statistics displays its
+header table in this case if a header is present. For the other modules,
+enabling `include_table` also displays an empty table when a header is present.
+In particular, an empty overrepresented-sequences table does not establish a
+general absence of contamination.
 
 Pass, Warn, and Fail are FastQC's reported module statuses, not report-builder
 success or failure states. The overview counts the ten standard modules

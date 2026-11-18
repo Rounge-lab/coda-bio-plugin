@@ -82,8 +82,12 @@ def test_every_registered_component_renders_by_default(
     assert result.status is ComponentStatus.OK
     assert result.html is not None
     assert "Ignored" not in result.html
-    assert "<table" not in result.html
     assert "<summary>Data table</summary>" not in result.html
+    if item.id == "bio.fastqc_basic_statistics":
+        assert "<table" in result.html
+        assert "VC1_1.fastq.gz" in result.html
+    else:
+        assert "<table" not in result.html
     if item.id not in {
         "bio.fastqc_overview",
         "bio.fastqc_basic_statistics",
@@ -94,7 +98,7 @@ def test_every_registered_component_renders_by_default(
 
 
 @pytest.mark.parametrize(
-    ("id_", "text", "include_table"),
+    ("id_", "text"),
     [
         (
             "bio.fastqc_per_base_n_content",
@@ -103,7 +107,6 @@ def test_every_registered_component_renders_by_default(
             "#Base\tN-Count\n"
             "1\t0\n"
             ">>END_MODULE\n",
-            False,
         ),
         (
             "bio.fastqc_overrepresented_sequences",
@@ -112,7 +115,6 @@ def test_every_registered_component_renders_by_default(
             "#Sequence\tCount\tPercentage\tPossible Source\n"
             "ACGT\t3\t1.5\tadapter\n"
             ">>END_MODULE\n",
-            False,
         ),
     ],
 )
@@ -164,8 +166,22 @@ def test_parameter_errors_precede_store_access(
     tmp_path: Path, parameters: dict[str, Any]
 ) -> None:
     ctx = context(tmp_path, "not FastQC", status="failed")
+    with pytest.raises(
+        ValueError, match="bio.fastqc_overrepresented_sequences"
+    ):
+        render(ctx, "bio.fastqc_overrepresented_sequences", parameters)
+
+
+def test_basic_statistics_rejects_include_table_before_store_access(
+    tmp_path: Path,
+) -> None:
+    ctx = context(tmp_path, "not FastQC", status="failed")
     with pytest.raises(ValueError, match="bio.fastqc_basic_statistics"):
-        render(ctx, "bio.fastqc_basic_statistics", parameters)
+        render(
+            ctx,
+            "bio.fastqc_basic_statistics",
+            {"artifact": TYPE, "include_table": False},
+        )
 
 
 def test_overview_rejects_include_table_before_store_access(tmp_path: Path) -> None:
@@ -250,6 +266,33 @@ def test_empty_modules_table_options_and_no_plotly_import(
     assert ("<th scope=" in outcome.html) is (include_table and has_header)
 
 
+@pytest.mark.parametrize(
+    ("body", "has_table_header"),
+    [
+        ("#Measure\tValue\n", True),
+        ("", False),
+    ],
+)
+def test_basic_statistics_always_shows_empty_notice_and_available_header(
+    tmp_path: Path,
+    body: str,
+    has_table_header: bool,
+) -> None:
+    text = f"##FastQC\t1\n>>Basic Statistics\twarn\n{body}>>END_MODULE\n"
+    ctx = context(tmp_path, text)
+
+    outcome = render(ctx, "bio.fastqc_basic_statistics", {"artifact": TYPE})
+
+    assert outcome.status is ComponentStatus.OK
+    assert outcome.html is not None
+    assert "This module contains no data rows." in outcome.html
+    assert ("<table" in outcome.html) is has_table_header
+    assert ("<th scope=" in outcome.html) is has_table_header
+    if has_table_header:
+        assert "Measure" in outcome.html
+        assert "Value" in outcome.html
+
+
 def test_overview_counts_order_and_additional_modules(tmp_path: Path) -> None:
     text = (
         "##FastQC\t1<&\n"
@@ -286,7 +329,7 @@ def test_escaped_complete_table_and_caption(tmp_path: Path) -> None:
     outcome = render(
         ctx,
         "bio.fastqc_basic_statistics",
-        {"artifact": TYPE, "caption": "<caption>&", "include_table": True},
+        {"artifact": TYPE, "caption": "<caption>&"},
     )
     assert outcome.html is not None
     assert "Extra &lt;header&gt;" in outcome.html
