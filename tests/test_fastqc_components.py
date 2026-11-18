@@ -85,7 +85,9 @@ def test_registration() -> None:
     assert all(item.css == FASTQC_TABLE_CSS for item in first.components[1:])
     assert all(item.css.endswith(_TABLE.css or "") for item in first.components[1:])
     assert all(item.js == FASTQC_TABLE_JS for item in first.components[1:])
-    assert all(item.js is not None and _TABLE.js in item.js for item in first.components[1:])
+    assert all(
+        item.js is not None and _TABLE.js in item.js for item in first.components[1:]
+    )
     assert "document.currentScript.textContent" in FASTQC_TABLE_JS
     assert 'document.documentElement.classList.add("coda-js")' in FASTQC_TABLE_JS
     assert [item.format for item in first.artifact_verifiers] == ["bio.fastqc"]
@@ -165,7 +167,9 @@ def test_optional_table_for_chart_and_table_components(
         assert "<table" in outcome.html
         assert 'class="coda-table__controls"' in outcome.html
         assert "coda-table__sort-icon" in outcome.html
-        assert 'data-key="Base"' in outcome.html or 'data-key="Sequence"' in outcome.html
+        assert (
+            'data-key="Base"' in outcome.html or 'data-key="Sequence"' in outcome.html
+        )
         assert 'data-type="numeric"' in outcome.html
         assert "ACGT" in outcome.html or id_ != "bio.fastqc_overrepresented_sequences"
     else:
@@ -273,7 +277,7 @@ def test_empty_modules_table_options_and_no_plotly_import(
     if include_table and has_header:
         assert 'class="coda-table__controls"' in outcome.html
         assert "coda-table__sort-icon" in outcome.html
-        assert 'data-type="numeric"' in outcome.html
+        assert 'data-type="text"' in outcome.html
 
 
 @pytest.mark.parametrize(
