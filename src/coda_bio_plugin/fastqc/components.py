@@ -164,7 +164,9 @@ def _render_table(
     component_id: str,
     module_name: str,
 ) -> RenderedComponent:
-    module, unavailable, caption = _module(context, component_id, parameters, module_name)
+    module, unavailable, caption = _module(
+        context, component_id, parameters, module_name
+    )
     if unavailable is not None:
         return RenderedComponent.unavailable(unavailable)
     assert module is not None
@@ -203,7 +205,9 @@ def _render_chart(
     builder: FigureBuilder,
     explanation: str = "",
 ) -> RenderedComponent:
-    module, unavailable, caption = _module(context, component_id, parameters, module_name)
+    module, unavailable, caption = _module(
+        context, component_id, parameters, module_name
+    )
     if unavailable is not None:
         return RenderedComponent.unavailable(unavailable)
     assert module is not None

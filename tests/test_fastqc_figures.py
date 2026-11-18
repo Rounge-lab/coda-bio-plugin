@@ -6,15 +6,15 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
-from coda_bio_plugin.fastqc import figures
-from coda_bio_plugin.fastqc.parser import parse_fastqc
-from coda_bio_plugin.plugin import get_plugin
 from workflow_coda.cli import main
 from workflow_coda.errors import RenderError
 from workflow_coda.layout import LAYOUT_SCHEMA_VERSION
 from workflow_coda.manifest import MANIFEST_SCHEMA_VERSION
 from workflow_coda.theme import DEFAULT_THEME
+
+from coda_bio_plugin.fastqc import figures
+from coda_bio_plugin.fastqc.parser import parse_fastqc
+from coda_bio_plugin.plugin import get_plugin
 
 EXAMPLE = Path("docs/examples/fastqc/fastqc_data.txt")
 
@@ -72,7 +72,9 @@ def test_reordered_columns_and_fractional_counts() -> None:
 
 def test_heatmap_and_grouped_bars() -> None:
     content = module("Per base sequence content")
-    figure, description = figures.build_per_base_sequence_content(DEFAULT_THEME, content)
+    figure, description = figures.build_per_base_sequence_content(
+        DEFAULT_THEME, content
+    )
     trace = figure.to_plotly_json()["data"][0]
     assert trace["type"] == "heatmap"
     assert list(trace["y"]) == ["G", "A", "T", "C"]

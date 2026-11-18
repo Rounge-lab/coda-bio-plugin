@@ -76,7 +76,9 @@ def verify_fastqc(
     try:
         text = data.decode("utf-8")
     except UnicodeDecodeError as exc:
-        raise VerificationError(f"bio.fastqc verification: invalid UTF-8: {exc}") from exc
+        raise VerificationError(
+            f"bio.fastqc verification: invalid UTF-8: {exc}"
+        ) from exc
     try:
         report = parse_fastqc(text)
     except FastqcParseError as exc:

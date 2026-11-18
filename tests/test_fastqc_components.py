@@ -6,16 +6,16 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
-from coda_bio_plugin.fastqc.components import FASTQC_CSS
-from coda_bio_plugin.fastqc.parser import MODULE_NAMES
-from coda_bio_plugin.plugin import get_plugin
 from workflow_coda.artifact_store import ArtifactStore
 from workflow_coda.components import ComponentChrome, ComponentStatus, PlacementInfo
 from workflow_coda.context import RenderContext
 from workflow_coda.errors import ArtifactReadError
 from workflow_coda.icons import IconLibrary, IconSource
 from workflow_coda.manifest import MANIFEST_SCHEMA_VERSION
+
+from coda_bio_plugin.fastqc.components import FASTQC_CSS
+from coda_bio_plugin.fastqc.parser import MODULE_NAMES
+from coda_bio_plugin.plugin import get_plugin
 
 TYPE = "org.example.fastqc"
 EXAMPLE = Path("docs/examples/fastqc/fastqc_data.txt")
@@ -46,9 +46,7 @@ def context(
     }
     path = tmp_path / "manifest.json"
     path.write_text(json.dumps(manifest), encoding="utf-8")
-    sources = (
-        (IconSource.for_plugin("core", "workflow_coda.core"),) if icons else ()
-    )
+    sources = (IconSource.for_plugin("core", "workflow_coda.core"),) if icons else ()
     return RenderContext(
         store=ArtifactStore.from_manifest_file(path), icons=IconLibrary(sources)
     )

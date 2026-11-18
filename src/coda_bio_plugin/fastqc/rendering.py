@@ -103,15 +103,11 @@ def caption_html(caption: str | None) -> str:
     return f'<p class="coda-bio-fastqc__caption">{html.escape(caption)}</p>'
 
 
-def table_html(
-    headers: tuple[str, ...], rows: tuple[tuple[str, ...], ...]
-) -> str:
+def table_html(headers: tuple[str, ...], rows: tuple[tuple[str, ...], ...]) -> str:
     """Render every supplied header and cell in their original order."""
     if not headers:
         return ""
-    head = "".join(
-        f'<th scope="col">{html.escape(header)}</th>' for header in headers
-    )
+    head = "".join(f'<th scope="col">{html.escape(header)}</th>' for header in headers)
     body = "".join(
         "<tr>" + "".join(f"<td>{html.escape(cell)}</td>" for cell in row) + "</tr>"
         for row in rows
