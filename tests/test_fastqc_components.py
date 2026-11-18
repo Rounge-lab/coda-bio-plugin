@@ -320,7 +320,12 @@ def test_overview_counts_order_and_additional_modules(tmp_path: Path) -> None:
     )
     end = page.index("</ul>", start)
     counts = page[start:end]
-    expected = ("1 Pass", "1 Warn", "1 Fail", "7 Unavailable")
+    expected = (
+        ">1</span> Pass",
+        ">1</span> Warn",
+        ">1</span> Fail",
+        ">7</span> Unavailable",
+    )
     positions = [counts.index(label) for label in expected]
     assert positions == sorted(positions)
     assert page.count('class="coda-icon"') == 3
@@ -347,11 +352,7 @@ def test_status_borders_keep_neutral_border_and_color_left_edge(
     label: str,
     counts: dict[str, int],
 ) -> None:
-    text = (
-        "##FastQC\t1\n"
-        f">>Basic Statistics\t{status}\n"
-        ">>END_MODULE\n"
-    )
+    text = f"##FastQC\t1\n>>Basic Statistics\t{status}\n>>END_MODULE\n"
     ctx = context(tmp_path, text)
     expected_color = ctx.theme.colors[token]
     expected_left_border = f"border-left-color: {expected_color};"
@@ -370,8 +371,7 @@ def test_status_borders_keep_neutral_border_and_color_left_edge(
         f'style="border-left-color: {expected_color};">'
     ) in overview.html
     assert (
-        '<span class="coda-bio-fastqc__icon" '
-        f'style="color: {expected_color};">'
+        f'<span class="coda-bio-fastqc__icon" style="color: {expected_color};">'
     ) in overview.html
 
     for count_label, count in counts.items():
