@@ -1,0 +1,13 @@
+lint-cmd: "pixi run lint-fix"
+auto-lint: true
+test-cmd: "pixi run test"
+auto-test: true
+
+architect: true
+dry-run: false
+attribute-author: true
+
+read:
+  pyproject.toml
+  docs/examples/fastqc/fastqc_data.txt
+  .aider.prompt.md
