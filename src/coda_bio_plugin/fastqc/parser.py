@@ -198,7 +198,9 @@ def _parse_known_module(
                 _DUPLICATION_METADATA
             ):
                 if len(fields) != 2 or metadata:
-                    raise _fail(line_number, "invalid or duplicate duplication metadata")
+                    raise _fail(
+                        line_number, "invalid or duplicate duplication metadata"
+                    )
                 _percentage(fields[1], line_number, _DUPLICATION_METADATA)
                 metadata.append((fields[0], fields[1]))
                 continue
@@ -213,7 +215,9 @@ def _parse_known_module(
         _validate_row(name, header, row, line_number)
         if name == "Basic Statistics":
             if row[0] in measures:
-                raise _fail(line_number, f"duplicate Basic Statistics measure {row[0]!r}")
+                raise _fail(
+                    line_number, f"duplicate Basic Statistics measure {row[0]!r}"
+                )
             measures.add(row[0])
         rows.append(row)
 
@@ -227,9 +231,7 @@ def _parse_known_module(
     )
 
 
-def _make_module(
-    name: str, status: str, body: list[tuple[int, str]]
-) -> FastqcModule:
+def _make_module(name: str, status: str, body: list[tuple[int, str]]) -> FastqcModule:
     if name in _HEADERS:
         return _parse_known_module(name, status, body)
     return FastqcModule(
@@ -242,18 +244,19 @@ def _make_module(
     )
 
 
+def _parse_version(lines: list[str]) -> str:
+    if not lines:
+        raise _fail(1, "missing ##FastQC version header")
+    fields = lines[0].split("\t")
+    if len(fields) != 2 or fields[0] != "##FastQC" or not fields[1].strip():
+        raise _fail(1, "expected ##FastQC followed by a tab and a version")
+    return fields[1]
+
+
 def parse_fastqc(text: str) -> FastqcReport:
     """Parse a FastQC data file, raising :class:`FastqcParseError` on failure."""
     lines = text.splitlines()
-    if not lines:
-        raise _fail(1, "missing ##FastQC version header")
-    version_fields = lines[0].split("\t")
-    if (
-        len(version_fields) != 2
-        or version_fields[0] != "##FastQC"
-        or not version_fields[1].strip()
-    ):
-        raise _fail(1, "expected ##FastQC followed by a tab and a version")
+    version = _parse_version(lines)
 
     modules: list[FastqcModule] = []
     seen: set[str] = set()
@@ -275,12 +278,16 @@ def parse_fastqc(text: str) -> FastqcReport:
                 raise _fail(line_number, f"module {name!r} is missing END_MODULE")
             fields = line[2:].split("\t")
             if len(fields) != 2 or not fields[0].strip():
-                raise _fail(line_number, "expected a module name and status, separated by a tab")
+                raise _fail(
+                    line_number, "expected a module name and status, separated by a tab"
+                )
             name, status = fields
             if name in seen:
                 raise _fail(line_number, f"duplicate module {name!r}")
             if status not in {"pass", "warn", "fail"}:
-                raise _fail(line_number, f"invalid status {status!r} for module {name!r}")
+                raise _fail(
+                    line_number, f"invalid status {status!r} for module {name!r}"
+                )
             seen.add(name)
         elif name is None:
             raise _fail(line_number, "content appears outside a module")
@@ -289,4 +296,4 @@ def parse_fastqc(text: str) -> FastqcReport:
 
     if name is not None:
         raise _fail(len(lines), f"module {name!r} is missing END_MODULE")
-    return FastqcReport(version=version_fields[1], modules=tuple(modules))
+    return FastqcReport(version=version, modules=tuple(modules))
