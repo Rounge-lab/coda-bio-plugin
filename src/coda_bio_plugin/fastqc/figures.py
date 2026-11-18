@@ -47,7 +47,7 @@ def _status(module: FastqcModule) -> str:
 
 
 def _status_color(theme: Theme, module: FastqcModule) -> str:
-    return theme.colors[STATUS_PRESENTATION[module.status][1]]
+    return cast(str, theme.colors[STATUS_PRESENTATION[module.status][1]])
 
 
 def _style(figure: Any, theme: Theme, x_title: str, y_title: str) -> None:
@@ -157,9 +157,7 @@ def _bar(
     x: list[str] | list[float]
     x = _labels(module, x_column) if categorical else _numbers(module, x_column)
     y = _numbers(module, y_column)
-    figure = go.Figure(
-        go.Bar(x=x, y=y, marker={"color": _status_color(theme, module)})
-    )
+    figure = go.Figure(go.Bar(x=x, y=y, marker={"color": _status_color(theme, module)}))
     _style(figure, theme, x_column, "Percent" if not count else y_column)
     if categorical:
         figure.update_xaxes(type="category", categoryorder="array", categoryarray=x)
