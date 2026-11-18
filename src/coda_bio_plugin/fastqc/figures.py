@@ -16,6 +16,8 @@ from workflow_coda.theme import Theme
 from .parser import FastqcModule
 from .rendering import STATUS_PRESENTATION
 
+type AxisRange = tuple[str | float, str | float]
+
 
 def _plotly() -> Any:
     """Import Plotly only when a non-empty chart needs it."""
@@ -53,7 +55,7 @@ def _status_color(theme: Theme, module: FastqcModule) -> str:
 def _style(figure: Any, theme: Theme, x_title: str, y_title: str) -> None:
     border = theme.colors["border"]
     axis = {
-        "showgrid": True,
+        "showgrid": False,
         "gridcolor": border,
         "linecolor": border,
         "zerolinecolor": border,
@@ -152,11 +154,17 @@ def _bar(
     subject: str,
     categorical: bool,
     count: bool,
+    x_range: AxisRange | None = None,
+    y_range: AxisRange | None = None,
+    x_fixed: bool = False,
+    y_fixed: bool = False,
 ) -> tuple[SupportsToHtml, str]:
     go = _plotly()
+
     x: list[str] | list[float]
     x = _labels(module, x_column) if categorical else _numbers(module, x_column)
     y = _numbers(module, y_column)
+
     figure = go.Figure(
         go.Bar(
             x=x,
@@ -164,15 +172,28 @@ def _bar(
             marker={"color": _status_color(theme, module), "line_width": 0},
         )
     )
+
     figure.update_layout(bargap=0, bargroupgap=0)
     _style(figure, theme, x_column, "Percent" if not count else y_column)
-    if categorical:
-        figure.update_xaxes(type="category", categoryorder="array", categoryarray=x)
-    else:
-        figure.update_xaxes(type="linear")
+
+    figure.update_xaxes(
+        type="category" if categorical else "linear",
+        categoryorder="array" if categorical else None,
+        categoryarray=x if categorical else None,
+        fixedrange=x_fixed,
+    )
+    figure.update_yaxes(fixedrange=y_fixed)
+
+    if x_range is not None:
+        figure.update_xaxes(range=list(x_range))
+
+    if y_range is not None:
+        figure.update_yaxes(range=list(y_range))
+
     description = _description(module, "Bar chart", subject)
     if count:
         description += f"; sum of reported counts: {math.fsum(y)}"
+
     return cast(SupportsToHtml, figure), description
 
 
@@ -187,6 +208,8 @@ def build_per_sequence_quality_scores(
         subject="per-sequence quality scores",
         categorical=False,
         count=True,
+        x_range=(0, 60),
+        y_fixed=True,
     )
 
 
@@ -201,6 +224,7 @@ def build_per_sequence_gc_content(
         subject="per-sequence GC content",
         categorical=False,
         count=True,
+        y_fixed=True,
     )
 
 
@@ -229,6 +253,7 @@ def build_sequence_length_distribution(
         subject="sequence length distribution",
         categorical=True,
         count=True,
+        y_fixed=True,
     )
 
 
@@ -249,7 +274,7 @@ def build_sequence_duplication_levels(
             )
         )
     _style(figure, theme, "Duplication Level", "Percent")
-    figure.update_layout(barmode="group")
+    figure.update_layout(barmode="group", yaxis=dict(fixedrange=True))
     figure.update_xaxes(type="category", categoryorder="array", categoryarray=labels)
     description = _description(module, "Grouped bar chart", "sequence duplication")
     description += f"; {len(names)} series: {', '.join(names)}"
