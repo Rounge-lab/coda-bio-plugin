@@ -144,11 +144,13 @@ def module_metadata_html(module: FastqcModule) -> str:
     """Render module metadata independently of its optional table."""
     if not module.metadata:
         return ""
-    entries = "".join(
-        f"<dt>{html.escape(key)}</dt><dd>{html.escape(value)}</dd>"
-        for key, value in module.metadata
-    )
-    return f'<dl class="coda-bio-fastqc__metadata">{entries}</dl>'
+
+    entries = []
+    for key, value in module.metadata:
+        if key == "Total Deduplicated Percentage":
+            value = f"{float(value):.2f}"
+        entries.append(f"<dt>{html.escape(key)}</dt><dd>{html.escape(value)}</dd>")
+    return f'<dl class="coda-bio-fastqc__metadata">{"".join(entries)}</dl>'
 
 
 def module_table_html(module: FastqcModule, include_table: bool) -> str:

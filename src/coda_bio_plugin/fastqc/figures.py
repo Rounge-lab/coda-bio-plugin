@@ -108,8 +108,8 @@ def build_per_base_sequence_quality(
             upperfence=upper,
             boxpoints=False,
             name="Quality percentiles",
-            marker={"color": theme.series[0]},
-            line={"color": theme.series[0]},
+            marker={"color": theme.text_on(theme.colors["surface"])},
+            line={"color": theme.text_on(theme.colors["surface"])},
         )
     )
     figure.add_trace(
@@ -118,7 +118,7 @@ def build_per_base_sequence_quality(
             y=mean,
             mode="lines+markers",
             name="Mean",
-            marker={"color": theme.series[1]},
+            marker={"color": theme.text_on(theme.colors["surface"])},
             line={"color": theme.series[1]},
         )
     )

@@ -67,9 +67,7 @@ def _read(
     supports_table: bool,
 ) -> tuple[FastqcReport | None, str | None, RenderSpec]:
     """Validate first, then read; convert only missing artifacts."""
-    spec = parse_parameters(
-        component_id, parameters, supports_table=supports_table
-    )
+    spec = parse_parameters(component_id, parameters, supports_table=supports_table)
     try:
         report = read_report(context, component_id, spec)
     except ArtifactUnavailableError as exc:
@@ -140,8 +138,8 @@ def render_overview(
     return RenderedComponent.from_html(
         '<div class="coda-bio-fastqc">'
         f"<p>FastQC version: {html.escape(report.version)}</p>"
-        f'<p class="coda-bio-fastqc__counts">{summary}</p>'
         f'<ul class="coda-bio-fastqc__overview">{items}</ul>'
+        f'<p class="coda-bio-fastqc__counts">{summary}</p>'
         f"{_additional_modules(report.modules)}"
         f"{caption_html(spec.caption)}</div>"
     )
@@ -171,9 +169,7 @@ def _render_table(
     component_id: str,
     module_name: str,
 ) -> RenderedComponent:
-    module, unavailable, spec = _module(
-        context, component_id, parameters, module_name
-    )
+    module, unavailable, spec = _module(context, component_id, parameters, module_name)
     if unavailable is not None:
         return RenderedComponent.unavailable(unavailable)
     assert module is not None
@@ -212,9 +208,7 @@ def _render_chart(
     builder: FigureBuilder,
     explanation: str = "",
 ) -> RenderedComponent:
-    module, unavailable, spec = _module(
-        context, component_id, parameters, module_name
-    )
+    module, unavailable, spec = _module(context, component_id, parameters, module_name)
     if unavailable is not None:
         return RenderedComponent.unavailable(unavailable)
     assert module is not None
@@ -230,9 +224,7 @@ def _render_chart(
     result = RenderedComponent.from_figure(figure, description=description)
     assert result.html is not None
     metadata = module_metadata_html(module)
-    disclosure = (
-        disclosure_html(module) if spec.include_table and module.header else ""
-    )
+    disclosure = disclosure_html(module) if spec.include_table and module.header else ""
     return replace(
         result,
         html=(

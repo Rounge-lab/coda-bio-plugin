@@ -95,6 +95,7 @@
 .coda-bio-fastqc__empty,
 .coda-bio-fastqc__counts {
   margin: 0.75rem 0;
+  color: var(--coda-muted);
 }
 
 .coda-bio-fastqc__caption,
