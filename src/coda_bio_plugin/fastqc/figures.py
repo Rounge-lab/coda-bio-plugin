@@ -208,7 +208,7 @@ def build_per_sequence_quality_scores(
         subject="per-sequence quality scores",
         categorical=False,
         count=True,
-        x_range=(0, 60),
+        x_range=(0, max(40, _labels(module, "Quality"))),
         y_fixed=True,
     )
 
