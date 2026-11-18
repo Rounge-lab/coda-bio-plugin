@@ -2,14 +2,14 @@
 
 import html
 from dataclasses import dataclass
-from typing import Final
+from typing import Final, cast
 
 from workflow_coda.components import ComponentParameters, reject_unknown_parameters
 from workflow_coda.context import RenderContext
 from workflow_coda.core.table import (
-    _RenderedTable,
     _assemble_markup,
     _controls_bar,
+    _RenderedTable,
     _sort_icons_html,
 )
 from workflow_coda.errors import ArtifactReadError
@@ -144,11 +144,14 @@ def table_html(
     if not headers:
         return ""
     rendered = _RenderedTable(labels=headers, rows=rows)
-    return _assemble_markup(
-        rendered,
-        caption=None,
-        sort_icons=_sort_icons_html(context),
-        controls_bar=_controls_bar(context),
+    return cast(
+        str,
+        _assemble_markup(
+            rendered,
+            caption=None,
+            sort_icons=_sort_icons_html(context),
+            controls_bar=_controls_bar(context),
+        ),
     )
 
 
