@@ -67,9 +67,7 @@ def _read(
     supports_table: bool,
 ) -> tuple[FastqcReport | None, str | None, RenderSpec]:
     """Validate first, then read; convert only missing artifacts."""
-    spec = parse_parameters(
-        component_id, parameters, supports_table=supports_table
-    )
+    spec = parse_parameters(component_id, parameters, supports_table=supports_table)
     try:
         report = read_report(context, component_id, spec)
     except ArtifactUnavailableError as exc:
@@ -248,9 +246,7 @@ def _render_chart(
     result = RenderedComponent.from_figure(figure, description=description)
     assert result.html is not None
     metadata = module_metadata_html(module)
-    disclosure = (
-        disclosure_html(module) if spec.include_table and module.header else ""
-    )
+    disclosure = disclosure_html(module) if spec.include_table and module.header else ""
     return replace(
         result,
         html=(
