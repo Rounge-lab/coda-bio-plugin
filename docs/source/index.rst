@@ -4,7 +4,7 @@ workflow-coda bio plugin
 User documentation for ``coda-bio-plugin``, a collection of
 bioinformatics-oriented components for workflow-coda reports.
 
-:doc:`User guide <user/index>`
+:doc:`User guide <user-guide/index>`
 
 :doc:`Reference <reference/index>`
 
@@ -12,5 +12,5 @@ bioinformatics-oriented components for workflow-coda reports.
    :hidden:
    :maxdepth: 2
 
-   user/index
+   user-guide/index
    reference/index
