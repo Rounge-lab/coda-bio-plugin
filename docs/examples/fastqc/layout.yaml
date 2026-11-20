@@ -1,5 +1,6 @@
 schema_version: "0.2.0"
 title: FastQC example
+theme: crcbiome-dark.yaml
 tabs:
   - title: FastQC
     components:

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+from workflow_coda.artifact_store import JsonValue
 from workflow_coda.errors import VerificationError
 
 from coda_bio_plugin.fastqc.parser import MODULE_NAMES
@@ -60,7 +61,9 @@ def test_empty_override_allows_no_modules() -> None:
         ),
     ],
 )
-def test_bad_criteria_are_rejected(criteria: dict[str, object], message: str) -> None:
+def test_bad_criteria_are_rejected(
+    criteria: dict[str, JsonValue], message: str
+) -> None:
     with pytest.raises(VerificationError, match=message):
         verify_fastqc(PARTIAL, criteria)
 

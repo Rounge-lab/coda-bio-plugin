@@ -106,8 +106,7 @@ warn_redundant_casts = true
 warn_unreachable = true
 
 [[tool.mypy.overrides]]
-# TODO: add py.typed to workflow-coda
-module = ["plotly", "plotly.*", "workflow_coda", "workflow_coda.*"]
+module = ["plotly", "plotly.*"]
 ignore_missing_imports = true
 
 [tool.pixi.workspace]
@@ -118,7 +117,7 @@ platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
 python = ">=3.14,<3.15"
 
 [tool.pixi.pypi-dependencies]
-workflow-coda = { git = "ssh://git@github.com/sverre-branders/workflow-coda.git", rev = "c1976d0" }
+workflow-coda = { git = "ssh://git@github.com/sverre-branders/workflow-coda.git", rev = "ade56da" }
 coda-bio-plugin = { path = ".", editable = true, extras = ["dev"] }
 
 [tool.pixi.feature.docs.pypi-dependencies]

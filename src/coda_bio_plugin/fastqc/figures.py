@@ -7,7 +7,7 @@ observations, theoretical distributions, or QC judgments are invented.
 import html
 import math
 from collections.abc import Callable
-from typing import Any, cast
+from typing import Any, Protocol
 
 from workflow_coda.components import SupportsToHtml
 from workflow_coda.errors import RenderError
@@ -17,6 +17,12 @@ from .parser import FastqcModule
 from .rendering import STATUS_PRESENTATION
 
 type AxisRange = tuple[str | float, str | float]
+
+
+class SupportsPlotlyFigure(SupportsToHtml, Protocol):
+    """A renderable Plotly-compatible figure."""
+
+    def to_plotly_json(self) -> dict[str, Any]: ...
 
 
 def _plotly() -> Any:
@@ -49,7 +55,7 @@ def _status(module: FastqcModule) -> str:
 
 
 def _status_color(theme: Theme, module: FastqcModule) -> str:
-    return cast(str, theme.colors[STATUS_PRESENTATION[module.status][1]])
+    return theme.colors[STATUS_PRESENTATION[module.status][1]]
 
 
 def _style(figure: Any, theme: Theme, x_title: str, y_title: str) -> None:
@@ -82,7 +88,7 @@ def _description(module: FastqcModule, kind: str, subject: str) -> str:
 
 def build_per_base_sequence_quality(
     theme: Theme, module: FastqcModule
-) -> tuple[SupportsToHtml, str]:
+) -> tuple[SupportsPlotlyFigure, str]:
     """Precomputed quality boxes and the reported mean line."""
     go = _plotly()
     bins = _labels(module, "Base")
@@ -140,7 +146,7 @@ def build_per_base_sequence_quality(
     _style(figure, theme, "Base", "Quality score")
     figure.update_xaxes(type="category", categoryorder="array", categoryarray=bins)
     figure.update_yaxes(range=[low, high])
-    return cast(SupportsToHtml, figure), _description(
+    return figure, _description(
         module, "Box plot and mean line", "per-base sequence quality"
     )
 
@@ -158,7 +164,7 @@ def _bar(
     y_range: AxisRange | None = None,
     x_fixed: bool = False,
     y_fixed: bool = False,
-) -> tuple[SupportsToHtml, str]:
+) -> tuple[SupportsPlotlyFigure, str]:
     go = _plotly()
 
     x: list[str] | list[float]
@@ -194,12 +200,12 @@ def _bar(
     if count:
         description += f"; sum of reported counts: {math.fsum(y)}"
 
-    return cast(SupportsToHtml, figure), description
+    return figure, description
 
 
 def build_per_sequence_quality_scores(
     theme: Theme, module: FastqcModule
-) -> tuple[SupportsToHtml, str]:
+) -> tuple[SupportsPlotlyFigure, str]:
     return _bar(
         theme,
         module,
@@ -215,7 +221,7 @@ def build_per_sequence_quality_scores(
 
 def build_per_sequence_gc_content(
     theme: Theme, module: FastqcModule
-) -> tuple[SupportsToHtml, str]:
+) -> tuple[SupportsPlotlyFigure, str]:
     return _bar(
         theme,
         module,
@@ -230,7 +236,7 @@ def build_per_sequence_gc_content(
 
 def build_per_base_n_content(
     theme: Theme, module: FastqcModule
-) -> tuple[SupportsToHtml, str]:
+) -> tuple[SupportsPlotlyFigure, str]:
     return _bar(
         theme,
         module,
@@ -244,7 +250,7 @@ def build_per_base_n_content(
 
 def build_sequence_length_distribution(
     theme: Theme, module: FastqcModule
-) -> tuple[SupportsToHtml, str]:
+) -> tuple[SupportsPlotlyFigure, str]:
     return _bar(
         theme,
         module,
@@ -259,7 +265,7 @@ def build_sequence_length_distribution(
 
 def build_sequence_duplication_levels(
     theme: Theme, module: FastqcModule
-) -> tuple[SupportsToHtml, str]:
+) -> tuple[SupportsPlotlyFigure, str]:
     go = _plotly()
     labels = _labels(module, "Duplication Level")
     names = ("Percentage of deduplicated", "Percentage of total")
@@ -278,7 +284,7 @@ def build_sequence_duplication_levels(
     figure.update_xaxes(type="category", categoryorder="array", categoryarray=labels)
     description = _description(module, "Grouped bar chart", "sequence duplication")
     description += f"; {len(names)} series: {', '.join(names)}"
-    return cast(SupportsToHtml, figure), description
+    return figure, description
 
 
 def _heatmap(
@@ -288,7 +294,7 @@ def _heatmap(
     bin_column: str,
     names: tuple[str, ...],
     subject: str,
-) -> tuple[SupportsToHtml, str]:
+) -> tuple[SupportsPlotlyFigure, str]:
     go = _plotly()
     bins = _labels(module, bin_column)
     series = [html.escape(name) for name in names]
@@ -312,12 +318,12 @@ def _heatmap(
     figure.update_yaxes(type="category", categoryorder="array", categoryarray=series)
     description = _description(module, "Percentage heatmap", subject)
     description += f"; {len(names)} series: {', '.join(names)}"
-    return cast(SupportsToHtml, figure), description
+    return figure, description
 
 
 def build_per_base_sequence_content(
     theme: Theme, module: FastqcModule
-) -> tuple[SupportsToHtml, str]:
+) -> tuple[SupportsPlotlyFigure, str]:
     return _heatmap(
         theme,
         module,
@@ -329,7 +335,7 @@ def build_per_base_sequence_content(
 
 def build_adapter_content(
     theme: Theme, module: FastqcModule
-) -> tuple[SupportsToHtml, str]:
+) -> tuple[SupportsPlotlyFigure, str]:
     return _heatmap(
         theme,
         module,
@@ -339,4 +345,4 @@ def build_adapter_content(
     )
 
 
-type FigureBuilder = Callable[[Theme, FastqcModule], tuple[SupportsToHtml, str]]
+type FigureBuilder = Callable[[Theme, FastqcModule], tuple[SupportsPlotlyFigure, str]]

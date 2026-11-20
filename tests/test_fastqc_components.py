@@ -83,8 +83,13 @@ def test_registration() -> None:
     assert first.components[0].css == f"{FASTQC_CSS}\n{markdown_css}"
     assert first.components[0].js is None
     assert all(item.css == FASTQC_TABLE_CSS for item in first.components[1:])
-    assert all(item.css.endswith(_TABLE.css or "") for item in first.components[1:])
+    assert _TABLE.css is not None
+    assert all(
+        item.css is not None and item.css.endswith(_TABLE.css)
+        for item in first.components[1:]
+    )
     assert all(item.js == FASTQC_TABLE_JS for item in first.components[1:])
+    assert _TABLE.js is not None
     assert all(
         item.js is not None and _TABLE.js in item.js for item in first.components[1:]
     )
