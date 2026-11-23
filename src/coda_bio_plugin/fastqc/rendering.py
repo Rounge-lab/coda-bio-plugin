@@ -178,11 +178,22 @@ def module_table_html(
     return module_metadata_html(module) + table + empty
 
 
+def disclosure_summary_html(context: RenderContext, title: str) -> str:
+    """Render a native disclosure label with the shipped dropdown icon."""
+    icon = context.icons.load("core-dropdown").markup
+    return (
+        "<summary>"
+        f'<span class="coda-bio-fastqc__disclosure-title">{html.escape(title)}</span>'
+        f'<span class="coda-bio-fastqc__dropdown">{icon}</span>'
+        "</summary>"
+    )
+
+
 def disclosure_html(context: RenderContext, module: FastqcModule) -> str:
     """Wrap the complete module table in a native disclosure."""
     return (
         '<details class="coda-bio-fastqc__disclosure">'
-        "<summary>Data table</summary>"
+        f"{disclosure_summary_html(context, 'Data table')}"
         f"{table_html(context, module.header, module.rows)}"
         "</details>"
     )

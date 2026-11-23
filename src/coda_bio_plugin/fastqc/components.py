@@ -34,6 +34,7 @@ from .rendering import (
     RenderSpec,
     caption_html,
     disclosure_html,
+    disclosure_summary_html,
     missing_module_message,
     module_metadata_html,
     module_table_html,
@@ -187,7 +188,9 @@ def _overview_counts(context: RenderContext, counts: Counter[str], missing: int)
     )
 
 
-def _additional_modules(modules: tuple[FastqcModule, ...]) -> str:
+def _additional_modules(
+    context: RenderContext, modules: tuple[FastqcModule, ...]
+) -> str:
     additional = [module for module in modules if module.name not in MODULE_NAMES]
     if not additional:
         return ""
@@ -198,7 +201,8 @@ def _additional_modules(modules: tuple[FastqcModule, ...]) -> str:
     )
     return (
         '<details class="coda-bio-fastqc__disclosure">'
-        f"<summary>Additional modules</summary><ul>{items}</ul></details>"
+        f"{disclosure_summary_html(context, 'Additional modules')}"
+        f"<ul>{items}</ul></details>"
     )
 
 
@@ -228,7 +232,7 @@ def render_overview(
         f"{_overview_counts(context, counts, missing)}"
         '<div class="coda-prose"><div><hr></div></div>'
         f'<ul class="coda-bio-fastqc__overview">{items}</ul>'
-        f"{_additional_modules(report.modules)}"
+        f"{_additional_modules(context, report.modules)}"
         f"{caption_html(spec.caption)}</div>"
     )
 
