@@ -194,6 +194,14 @@ def test_cli_seam_all_components_and_repeated_chart(tmp_path: Path) -> None:
         assert page.count(f"/* {id_} */") == 1
     assert page.count('data-component="bio.fastqc_per_base_n_content"') == 2
     assert page.count('class="coda-figure"') == 9
-    assert page.count("<summary>Data table</summary>") == 1
+    assert (
+        page.count('<span class="coda-bio-fastqc__disclosure-title">Data table</span>')
+        == 1
+    )
+    assert '<span class="coda-bio-fastqc__dropdown"><svg' in page
+
+    # Plugin disclosures embed their SVG directly, independently of
+    # categorical-state navigation chrome.
+    assert '<template id="coda-dropdown-icon">' not in page
     assert "VC1_1.fastq.gz" in page
     assert "Plotly.newPlot" in page

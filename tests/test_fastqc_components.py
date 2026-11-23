@@ -21,10 +21,15 @@ from coda_bio_plugin.fastqc.components import (
     FASTQC_TABLE_JS,
 )
 from coda_bio_plugin.fastqc.parser import MODULE_NAMES
+from coda_bio_plugin.fastqc.rendering import disclosure_summary_html
 from coda_bio_plugin.plugin import get_plugin
 
 TYPE = "org.example.fastqc"
 EXAMPLE = Path("docs/examples/fastqc/fastqc_data.txt")
+DATA_TABLE_TITLE = '<span class="coda-bio-fastqc__disclosure-title">Data table</span>'
+ADDITIONAL_MODULES_TITLE = (
+    '<span class="coda-bio-fastqc__disclosure-title">Additional modules</span>'
+)
 
 
 def context(
@@ -108,7 +113,7 @@ def test_every_registered_component_renders_by_default(
     assert result.status is ComponentStatus.OK
     assert result.html is not None
     assert "Ignored" not in result.html
-    assert "<summary>Data table</summary>" not in result.html
+    assert DATA_TABLE_TITLE not in result.html
     if item.id == "bio.fastqc_basic_statistics":
         assert "<table" in result.html
         assert "VC1_1.fastq.gz" in result.html
@@ -168,7 +173,7 @@ def test_optional_table_for_chart_and_table_components(
         assert 'class="coda-figure"' in outcome.html
     if include_table:
         if id_ == "bio.fastqc_per_base_n_content":
-            assert "<summary>Data table</summary>" in outcome.html
+            assert DATA_TABLE_TITLE in outcome.html
         assert "<table" in outcome.html
         assert 'class="coda-table__controls"' in outcome.html
         assert "coda-table__sort-icon" in outcome.html
@@ -179,7 +184,7 @@ def test_optional_table_for_chart_and_table_components(
         assert "ACGT" in outcome.html or id_ != "bio.fastqc_overrepresented_sequences"
     else:
         assert "<table" not in outcome.html
-        assert "<summary>Data table</summary>" not in outcome.html
+        assert DATA_TABLE_TITLE not in outcome.html
         assert 'class="coda-table__controls"' not in outcome.html
         assert "coda-table__sort-icon" not in outcome.html
         assert "ACGT" not in outcome.html
@@ -368,10 +373,15 @@ def test_overview_counts_order_and_additional_modules(tmp_path: Path) -> None:
     )
     positions = [counts.index(label) for label in expected]
     assert positions == sorted(positions)
-    assert page.count('class="coda-icon"') == 3
+    # Three reported-status icons plus the additional-modules dropdown.
+    assert page.count('class="coda-icon"') == 4
     assert page.index("Basic Statistics") < page.index("Per base sequence quality")
     assert page.index("Per base N content") < page.index("Adapter Content")
-    assert "<summary>Additional modules</summary>" in page
+    assert ADDITIONAL_MODULES_TITLE in page
+    assert (
+        f'<span class="coda-bio-fastqc__dropdown">'
+        f"{ctx.icons.load('core-dropdown').markup}</span>"
+    ) in page
     assert "Extra &lt;module&gt;: Warn" in page
     for icon in ("core-check", "core-info", "core-warning"):
         assert ctx.icons.load(icon).markup in page
@@ -481,7 +491,15 @@ def test_chart_disclosure_contains_complete_escaped_table(tmp_path: Path) -> Non
         {"artifact": TYPE, "include_table": True},
     )
     assert outcome.html is not None
-    assert "<summary>Data table</summary>" in outcome.html
+    assert DATA_TABLE_TITLE in outcome.html
+    assert (
+        '<details class="coda-bio-fastqc__disclosure">'
+        f"{disclosure_summary_html(ctx, 'Data table')}"
+    ) in outcome.html
+    assert (
+        f'<span class="coda-bio-fastqc__dropdown">'
+        f"{ctx.icons.load('core-dropdown').markup}</span>"
+    ) in outcome.html
     assert "Extra &lt;header&gt;" in outcome.html
     assert "&lt;a&amp;b&gt;" in outcome.html
     assert 'class="coda-table__controls"' in outcome.html
@@ -496,3 +514,58 @@ def test_stylesheet_has_print_rules() -> None:
     assert ".coda-bio-fastqc__table-wrap" not in FASTQC_CSS
     assert _TABLE.css is not None
     assert _TABLE.css in FASTQC_TABLE_CSS
+
+
+def test_disclosure_summary_embeds_sanitized_icon_and_escapes_title(
+    tmp_path: Path,
+) -> None:
+    ctx = context(tmp_path, "##FastQC\t1\n")
+    icon = ctx.icons.load("core-dropdown").markup
+
+    markup = disclosure_summary_html(ctx, "Data <table> & values")
+
+    assert markup == (
+        "<summary>"
+        '<span class="coda-bio-fastqc__disclosure-title">'
+        "Data &lt;table&gt; &amp; values</span>"
+        f'<span class="coda-bio-fastqc__dropdown">{icon}</span>'
+        "</summary>"
+    )
+    assert markup.count("<svg") == 1
+    assert 'aria-hidden="true"' in icon
+    assert 'focusable="false"' in icon
+    assert 'class="coda-icon"' in icon
+
+
+def test_overview_without_additional_modules_has_no_dropdown(
+    tmp_path: Path,
+) -> None:
+    ctx = context(
+        tmp_path,
+        "##FastQC\t1\n>>Basic Statistics\tpass\n>>END_MODULE\n",
+    )
+
+    outcome = render(ctx, "bio.fastqc_overview", {"artifact": TYPE})
+
+    assert outcome.status is ComponentStatus.OK
+    assert outcome.html is not None
+    assert ADDITIONAL_MODULES_TITLE not in outcome.html
+    assert 'class="coda-bio-fastqc__dropdown"' not in outcome.html
+    assert outcome.html.count('class="coda-icon"') == 1
+
+
+def test_disclosure_styles_use_native_open_state() -> None:
+    # Disclosure behavior is native; the icon's rotation needs no JS.
+    assert ".coda-bio-fastqc__disclosure > summary" in FASTQC_CSS
+    assert "list-style: none" in FASTQC_CSS
+    assert (
+        ".coda-bio-fastqc__disclosure > summary::-webkit-details-marker"
+    ) in FASTQC_CSS
+    assert ".coda-bio-fastqc__disclosure-title" in FASTQC_CSS
+    assert ".coda-bio-fastqc__dropdown" in FASTQC_CSS
+    assert (
+        ".coda-bio-fastqc__disclosure[open] > summary > .coda-bio-fastqc__dropdown"
+    ) in FASTQC_CSS
+    assert "transform: rotate(180deg)" in FASTQC_CSS
+    assert "prefers-reduced-motion: reduce" in FASTQC_CSS
+    assert component("bio.fastqc_overview").js is None
