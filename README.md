@@ -9,6 +9,10 @@
     <img src="https://img.shields.io/github/v/release/Rounge-lab/coda-bio-plugin"
          alt="Latest release version">
   </a>
+  <a href="https://github.com/Rounge-lab/coda-bio-plugin/actions/workflows/ci.yml">
+    <img src="https://github.com/Rounge-lab/coda-bio-plugin/actions/workflows/ci.yml/badge.svg"
+         alt="CI status">
+  </a>
   <a href="./COPYING">
     <img src="https://img.shields.io/badge/license-GPL--v3.0-blue.svg"
          alt="Licence">
