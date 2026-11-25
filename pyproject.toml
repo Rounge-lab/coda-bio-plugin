@@ -153,7 +153,11 @@ docs-preview-dir = "python -c \"from pathlib import Path; Path('docs/source/_sta
 docs-fastqc-verify = { cmd = "workflow-coda verify verified-manifest.json fastqc_data.txt --id fastqc --type org.example.fastqc --format bio.fastqc --schema-version 1.0 --producer-name \"FastQC example\" --producer-version 1.0", cwd = "docs/examples/fastqc" }
 docs-preview-fastqc = { cmd = "workflow-coda build docs/examples/fastqc/verified-manifest.json docs/examples/fastqc/layout.yaml -o docs/source/_static/previews/fastqc.html", depends-on = ["docs-preview-dir", "docs-fastqc-verify"] }
 
-docs-previews = { depends-on = ["docs-preview-fastqc"] }
+docs-fastp-verify = { cmd = "workflow-coda verify verified-manifest.json fastp.json --id fastp --type org.example.fastp --format bio.fastp --schema-version 1.0 --producer-name \"fastp example\" --producer-version 1.0", cwd = "docs/examples/fastp" }
+docs-preview-fastp = { cmd = "workflow-coda build docs/examples/fastp/verified-manifest.json docs/examples/fastp/layout.yaml -o docs/source/_static/previews/fastp.html", depends-on = ["docs-preview-dir", "docs-fastp-verify"] }
 
+docs-previews = { depends-on = ["docs-preview-fastqc", "docs-preview-fastp"] }
 docs = { cmd = "sphinx-build -M html ./source ./build --fail-on-warning", cwd = "docs", depends-on = ["docs-previews"] }
-docs-clean = { cmd = "sphinx-build -M clean ./source ./build", cwd = "docs" }
+
+docs-clean-previews = "python -c \"from pathlib import Path; [p.unlink() for p in Path('docs/source/_static/previews').glob('*.html')]\""
+docs-clean = { cmd = "sphinx-build -M clean ./source ./build", cwd = "docs", depends-on = ["docs-clean-previews"] }

@@ -7,4 +7,5 @@ coda-bio-plugin.
 .. toctree::
    :maxdepth: 1
 
+   content/fastp
    content/fastqc
