@@ -106,7 +106,7 @@ def test_registration() -> None:
     )
     assert "document.currentScript.textContent" in FASTQC_TABLE_JS
     assert 'document.documentElement.classList.add("coda-js")' in FASTQC_TABLE_JS
-    assert [item.format for item in first.artifact_verifiers] == ["bio.fastqc"]
+    assert "bio.fastqc" in [item.format for item in first.artifact_verifiers]
     assert first.metadata.icons_package is None
 
 

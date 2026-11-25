@@ -3,6 +3,7 @@ from importlib import metadata
 from workflow_coda.components import PluginMetadata
 from workflow_coda.plugins import ReportPlugin
 
+from .fastp.verifier import FASTP_VERIFIER
 from .fastqc.components import FASTQC_COMPONENTS
 from .fastqc.verifier import FASTQC_VERIFIER
 
@@ -23,5 +24,5 @@ def get_plugin() -> ReportPlugin:
             supported_schema_versions=frozenset(SUPPORTED_MANIFEST_SCHEMA_VERSIONS),
         ),
         components=FASTQC_COMPONENTS,
-        artifact_verifiers=(FASTQC_VERIFIER,),
+        artifact_verifiers=(FASTQC_VERIFIER, FASTP_VERIFIER),
     )
