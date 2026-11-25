@@ -11,40 +11,21 @@ supplied data, and reader interaction state.
 import html
 import math
 from collections.abc import Callable
-from typing import Any, Protocol
 
 from workflow_coda.artifact_store import JsonValue
-from workflow_coda.components import SupportsToHtml
-from workflow_coda.errors import RenderError
-from workflow_coda.theme import FigureStyle, FigureTheme, Theme, ThemePair
+from workflow_coda.theme import FigureTheme, Theme, ThemePair
 
+from ..shared.figures import (
+    AxisRange,
+    FigureResult,
+    TraceStyler,
+    TraceUpdates,
+    bind_theme,
+    plotly,
+    style_figure,
+)
 from .parser import FastqcModule
 from .rendering import STATUS_PRESENTATION
-
-type AxisRange = tuple[str | float, str | float]
-
-
-class SupportsPlotlyFigure(SupportsToHtml, Protocol):
-    """A renderable Plotly-compatible figure."""
-
-    def to_plotly_json(self) -> dict[str, Any]: ...
-
-
-type FigureResult = tuple[SupportsPlotlyFigure, str, FigureTheme]
-type TraceUpdates = tuple[dict[str, JsonValue], ...]
-type TraceStyler = Callable[[Theme], TraceUpdates]
-
-
-def _plotly() -> Any:
-    """Import Plotly only when a non-empty chart needs it."""
-    try:
-        import plotly.graph_objects as go
-    except ImportError as exc:
-        raise RenderError(
-            "FastQC charts require plotly, which is not installed or cannot "
-            "be imported — install plotly and build again"
-        ) from exc
-    return go
 
 
 def _values(module: FastqcModule, name: str) -> list[str]:
@@ -68,42 +49,10 @@ def _status_color(theme: Theme, module: FastqcModule) -> str:
     return theme.colors[STATUS_PRESENTATION[module.status][1]]
 
 
-def _style(figure: Any, theme: Theme, x_title: str, y_title: str) -> None:
-    """Initialize presentation and axis policy for one figure."""
-    border = theme.colors["border"]
-    axis = {
-        "showgrid": False,
-        "gridcolor": border,
-        "linecolor": border,
-        "zerolinecolor": border,
-        "showline": True,
-    }
-    figure.update_layout(
-        paper_bgcolor="rgba(0, 0, 0, 0)",
-        plot_bgcolor="rgba(0, 0, 0, 0)",
-        font={
-            "family": theme.font_body,
-            "color": theme.text_on(theme.colors["surface"]),
-        },
-        xaxis={**axis, "title": {"text": html.escape(x_title)}},
-        yaxis={**axis, "title": {"text": html.escape(y_title)}},
-    )
-
-
-def _layout_updates(theme: Theme) -> dict[str, JsonValue]:
-    """Presentation updates only; preserve axis policy and reader state."""
-    border = theme.colors["border"]
+def _quality_band_layout(theme: Theme) -> dict[str, JsonValue]:
     return {
-        "paper_bgcolor": "rgba(0, 0, 0, 0)",
-        "plot_bgcolor": "rgba(0, 0, 0, 0)",
-        "font.family": theme.font_body,
-        "font.color": theme.text_on(theme.colors["surface"]),
-        "xaxis.gridcolor": border,
-        "xaxis.linecolor": border,
-        "xaxis.zerolinecolor": border,
-        "yaxis.gridcolor": border,
-        "yaxis.linecolor": border,
-        "yaxis.zerolinecolor": border,
+        f"shapes[{index}].fillcolor": theme.colors[token]
+        for index, token in enumerate(("danger", "warning", "success"))
     }
 
 
@@ -113,16 +62,11 @@ def _binding(
     *,
     quality_bands: bool = False,
 ) -> FigureTheme:
-    """Resolve identical update structure independently for both modes."""
-
-    def style(theme: Theme) -> FigureStyle:
-        layout = _layout_updates(theme)
-        if quality_bands:
-            for index, token in enumerate(("danger", "warning", "success")):
-                layout[f"shapes[{index}].fillcolor"] = theme.colors[token]
-        return FigureStyle(layout=layout, traces=trace_style(theme))
-
-    return FigureTheme(light=style(pair.light), dark=style(pair.dark))
+    return bind_theme(
+        pair,
+        trace_style,
+        extra_layout=_quality_band_layout if quality_bands else None,
+    )
 
 
 def _quality_trace_updates(theme: Theme) -> TraceUpdates:
@@ -182,7 +126,7 @@ def build_per_base_sequence_quality(
     pair: ThemePair, module: FastqcModule
 ) -> FigureResult:
     """Precomputed quality boxes and the reported mean line."""
-    go = _plotly()
+    go = plotly(subject="FastQC")
     theme = pair.light
     bins = _labels(module, "Base")
     q1 = _numbers(module, "Lower Quartile")
@@ -236,7 +180,7 @@ def build_per_base_sequence_quality(
             line_width=0,
             layer="below",
         )
-    _style(figure, theme, "Base", "Quality score")
+    style_figure(figure, theme, "Base", "Quality score")
     figure.update_xaxes(type="category", categoryorder="array", categoryarray=bins)
     figure.update_yaxes(range=[low, high])
     description = _description(
@@ -263,7 +207,7 @@ def _bar(
     x_fixed: bool = False,
     y_fixed: bool = False,
 ) -> FigureResult:
-    go = _plotly()
+    go = plotly(subject="FastQC")
     theme = pair.light
 
     x: list[str] | list[float]
@@ -279,7 +223,7 @@ def _bar(
     )
 
     figure.update_layout(bargap=0, bargroupgap=0)
-    _style(figure, theme, x_column, "Percent" if not count else y_column)
+    style_figure(figure, theme, x_column, "Percent" if not count else y_column)
 
     figure.update_xaxes(
         type="category" if categorical else "linear",
@@ -367,7 +311,7 @@ def build_sequence_length_distribution(
 def build_sequence_duplication_levels(
     pair: ThemePair, module: FastqcModule
 ) -> FigureResult:
-    go = _plotly()
+    go = plotly(subject="FastQC")
     theme = pair.light
     labels = _labels(module, "Duplication Level")
     names = ("Percentage of deduplicated", "Percentage of total")
@@ -381,7 +325,7 @@ def build_sequence_duplication_levels(
                 marker={"color": theme.series[index], "line_width": 0},
             )
         )
-    _style(figure, theme, "Duplication Level", "Percent")
+    style_figure(figure, theme, "Duplication Level", "Percent")
     figure.update_layout(barmode="group", yaxis=dict(fixedrange=True))
     figure.update_xaxes(type="category", categoryorder="array", categoryarray=labels)
     description = _description(module, "Grouped bar chart", "sequence duplication")
@@ -397,7 +341,7 @@ def _heatmap(
     names: tuple[str, ...],
     subject: str,
 ) -> FigureResult:
-    go = _plotly()
+    go = plotly(subject="FastQC")
     theme = pair.light
     ink = theme.text_on(theme.colors["surface"])
     bins = _labels(module, bin_column)
@@ -424,7 +368,7 @@ def _heatmap(
             hovertemplate="Series: %{y}<br>Bin: %{x}<br>Percent: %{z}<extra></extra>",
         )
     )
-    _style(figure, theme, bin_column, "Series")
+    style_figure(figure, theme, bin_column, "Series")
     figure.update_xaxes(type="category", categoryorder="array", categoryarray=bins)
     figure.update_yaxes(type="category", categoryorder="array", categoryarray=series)
     description = _description(module, "Percentage heatmap", subject)

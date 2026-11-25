@@ -87,11 +87,3 @@ disclosure containing the module's complete data table:
 
 The table is always present in the report if declared. Tables can increase
 report size, so include them where readers need the underlying values.
-
-Choose behavior when data is missing
-------------------------------------
-
-A missing artifact or a missing module produces an unavailable outcome for
-that placement. To choose whether unavailable placements appear as notices,
-are skipped, or cause the build to fail, use workflow-coda's placement
-policies.

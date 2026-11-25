@@ -377,7 +377,9 @@ def test_cli_seam_all_components_and_repeated_chart(tmp_path: Path) -> None:
     }
     manifest_path = tmp_path / "manifest.json"
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
-    ids = [item.id for item in get_plugin().components]
+    ids = [
+        item.id for item in get_plugin().components if item.id.startswith("bio.fastqc_")
+    ]
     placements = "".join(
         f"      - id: {id_}\n"
         "        parameters:\n"

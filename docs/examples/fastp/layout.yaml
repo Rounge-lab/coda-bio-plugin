@@ -1,0 +1,68 @@
+schema_version: "0.4.0"
+title: fastp component preview
+
+theme:
+  light: crcbiome-light
+  dark: crcbiome-dark
+
+tabs:
+  - title: Summary
+    components:
+      - id: bio.fastp_overview
+        parameters:
+          artifact: org.example.fastp
+          caption: Reported metrics before and after filtering.
+
+      - id: bio.fastp_filtering_result
+        parameters:
+          artifact: org.example.fastp
+          include_table: true
+          caption: Reported counts by filtering outcome.
+
+      - id: bio.fastp_duplication
+        parameters:
+          artifact: org.example.fastp
+          caption: Duplication rate reported by fastp.
+
+      - id: bio.fastp_insert_size
+        parameters:
+          artifact: org.example.fastp
+          include_table: true
+          caption: Histogram bins retain their supplied insert-size indices.
+
+      - id: bio.fastp_adapter_cutting
+        parameters:
+          artifact: org.example.fastp
+          caption: Reported adapter trimming totals and adapter counts.
+
+  - title: Before filtering
+    components:
+      - id: bio.fastp_quality_curves
+        parameters:
+          artifact: org.example.fastp
+          section: read1_before_filtering
+          include_table: true
+          caption: Read 1 quality scores before filtering.
+
+      - id: bio.fastp_content_curves
+        parameters:
+          artifact: org.example.fastp
+          section: read1_before_filtering
+          include_table: true
+          caption: Read 1 base content before filtering.
+
+  - title: After filtering
+    components:
+      - id: bio.fastp_quality_curves
+        parameters:
+          artifact: org.example.fastp
+          section: read1_after_filtering
+          include_table: true
+          caption: Read 1 quality scores after filtering.
+
+      - id: bio.fastp_content_curves
+        parameters:
+          artifact: org.example.fastp
+          section: read1_after_filtering
+          include_table: true
+          caption: Read 1 base content after filtering.
