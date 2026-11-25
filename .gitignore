@@ -12,3 +12,4 @@ docs/examples/build/
 .aider.prompt.md
 docs/examples/*/*verified-manifest.json
 *report.html
+/docs/source/_static/previews/

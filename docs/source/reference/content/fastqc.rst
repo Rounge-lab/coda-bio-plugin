@@ -51,6 +51,24 @@ Every recognized module present in the artifact is validated, including modules
 omitted from ``required_modules``. The verifier accepts required module names
 from this standard list.
 
+Verifier criteria
+-----------------
+
+.. list-table::
+   :header-rows: 1
+
+   * - Criterion
+     - Type
+     - Default
+     - Meaning
+   * - ``required_modules``
+     - List of strings or comma-separated string
+     - All ten standard modules
+     - Exact standard module names required to be present.
+
+An empty list or empty string requires no modules. Names are case-sensitive;
+unknown names, duplicate names, empty names, and unknown criteria are rejected.
+
 Components
 ----------
 
@@ -138,3 +156,22 @@ Output behavior
        included only when ``include_table: true``.
    * - Caption
      - Optional visible text is rendered with the component content.
+
+
+Preview
+-------
+
+The example report includes every FastQC component using the bundled
+example data. Some components include their optional data tables.
+
+.. raw:: html
+
+   <iframe
+     src="../../_static/previews/fastqc.html"
+     title="FastQC component preview"
+     loading="lazy"
+     style="width: 100%; height: 800px; border: 1px solid #ddd;">
+   </iframe>
+
+`Open the example report in a separate page
+<../../_static/previews/fastqc.html>`_.

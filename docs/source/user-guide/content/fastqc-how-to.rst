@@ -57,7 +57,7 @@ the artifact's **type** from the manifest (not its artifact id):
 
 .. code-block:: yaml
 
-   schema_version: "0.2.0"
+   schema_version: "0.4.0"
    title: Sequencing report
    tabs:
      - title: FastQC

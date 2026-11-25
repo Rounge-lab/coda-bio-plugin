@@ -4,7 +4,7 @@ tabs:
   - title: FastQC
     components:
       - type: card
-        title: Read QC
+        title: Sample QC
         children:
         - type: grid
           split: [1, 1]
@@ -47,6 +47,3 @@ tabs:
           - id: bio.fastqc_adapter_content
             parameters:
               artifact: org.example.fastqc
-  - title: Diagnostics
-    components:
-      - type: diagnostics
