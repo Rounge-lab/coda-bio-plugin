@@ -29,7 +29,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "_ext"))
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.viewcode",
-    "sphinx_rtd_dark_mode",
     "sphinx_copybutton",
 ]
 
@@ -49,12 +48,8 @@ html_theme_options = {
     "logo_only": False,
 }
 
-html_theme = "sphinx_rtd_theme"
+html_theme = "crcbiome"
 html_static_path = ["_static"]
-
-# html_css_files = [
-#     "docs_theme.css",
-# ]
 
 # -- Autodoc
 autodoc_default_options = {

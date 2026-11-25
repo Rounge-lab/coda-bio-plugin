@@ -32,6 +32,7 @@ docs = [
     "sphinx-copybutton",
     "sphinx-rtd-dark-mode",
     "sphinx-rtd-theme",
+    "crcbiome-sphinx-theme @ git+https://github.com/Rounge-lab/crcbiome-sphinx-theme.git@v0.1.0",
 ]
 
 [project.entry-points."workflow_coda.plugins"]
@@ -42,6 +43,9 @@ path = "src/coda_bio_plugin/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/coda_bio_plugin"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -117,7 +121,7 @@ platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
 python = ">=3.14,<3.15"
 
 [tool.pixi.pypi-dependencies]
-workflow-coda = { git = "ssh://git@github.com/sverre-branders/workflow-coda.git", rev = "ca4a948" }
+workflow-coda = { git = "ssh://git@github.com/Rounge-lab/workflow-coda.git", tag = "v0.3.0" }
 coda-bio-plugin = { path = ".", editable = true, extras = ["dev"] }
 
 [tool.pixi.feature.docs.pypi-dependencies]
