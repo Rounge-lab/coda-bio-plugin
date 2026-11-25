@@ -3,7 +3,6 @@
 import html
 from collections import Counter
 from dataclasses import replace
-from importlib import resources
 from typing import Final
 
 from workflow_coda.components import (
@@ -14,10 +13,10 @@ from workflow_coda.components import (
     ReportComponent,
 )
 from workflow_coda.context import RenderContext
-from workflow_coda.core.plugin import _TABLE
-from workflow_coda.errors import ArtifactUnavailableError, PluginAssetError
+from workflow_coda.errors import ArtifactUnavailableError
 from workflow_coda.theme import color_css
 
+from ..shared.assets import core_table_assets, guard_core_table_js, load_css
 from .figures import (
     FigureBuilder,
     build_adapter_content,
@@ -44,88 +43,19 @@ from .rendering import (
     status_badge,
 )
 
-
-def _load_css() -> str:
-    try:
-        return (
-            resources.files("coda_bio_plugin")
-            .joinpath("assets", "fastqc.css")
-            .read_text(encoding="utf-8")
-        )
-    except (OSError, UnicodeError) as exc:
-        raise PluginAssetError(
-            "coda-bio-plugin asset 'assets/fastqc.css' is missing or unreadable "
-            "— reinstall coda-bio-plugin"
-        ) from exc
-
-
-def _load_markdown_css() -> str:
-    try:
-        return (
-            resources.files("workflow_coda.core")
-            .joinpath("assets", "markdown.css")
-            .read_text(encoding="utf-8")
-        )
-    except (OSError, UnicodeError) as exc:
-        raise PluginAssetError(
-            "workflow-coda core asset 'assets/markdown.css' is missing or unreadable "
-            "— reinstall workflow-coda"
-        ) from exc
-
-
-def _core_table_assets() -> tuple[str, str]:
-    """Read the installed core table declaration's CSS and JavaScript.
-
-    FastQC reuses private core table rendering helpers and the core table's
-    declared assets. This integration is coupled to the installed
-    workflow-coda version and must be tested when upgrading it.
-    """
-    if _TABLE.css is None or _TABLE.js is None:
-        raise PluginAssetError(
-            "workflow-coda core.table must declare CSS and JavaScript "
-            "for FastQC table integration"
-        )
-    return _TABLE.css, _TABLE.js
-
-
-def _guard_core_table_js(core_js: str) -> str:
-    """Guard the core initializer when multiple FastQC components contribute it.
-
-    The framework combines component JavaScript into one script block. Its
-    exact core contribution banner is therefore visible to each FastQC
-    contribution regardless of contribution order. If no core.table
-    contribution exists, a namespaced html marker lets the first FastQC
-    contribution initialize all tables and prevents subsequent copies from
-    initializing them again.
-    """
-    return (
-        "(function () {\n"
-        '  "use strict";\n'
-        '  document.documentElement.classList.add("coda-js");\n'
-        "  var source = document.currentScript\n"
-        "    ? document.currentScript.textContent\n"
-        '    : "";\n'
-        '  if (source.indexOf("// core.table\\n") !== -1) {\n'
-        "    return;\n"
-        "  }\n"
-        '  var marker = "data-coda-bio-fastqc-table-initialized";\n'
-        "  if (document.documentElement.hasAttribute(marker)) {\n"
-        "    return;\n"
-        "  }\n"
-        '  document.documentElement.setAttribute(marker, "true");\n'
-        f"{core_js}\n"
-        "}());"
-    )
-
-
-def _load_css_assets() -> tuple[str, str, str]:
-    core_css, core_js = _core_table_assets()
-    fastqc_css = _load_css()
-    return fastqc_css, f"{fastqc_css}\n{core_css}", _guard_core_table_js(core_js)
-
-
-FASTQC_CSS, FASTQC_TABLE_CSS, FASTQC_TABLE_JS = _load_css_assets()
-FASTQC_OVERVIEW_CSS: Final[str] = f"{FASTQC_CSS}\n{_load_markdown_css()}"
+FASTQC_CSS: Final[str] = load_css(
+    "coda_bio_plugin",
+    "assets/fastqc.css",
+    distribution="coda-bio-plugin",
+)
+_CORE_TABLE_CSS, _CORE_TABLE_JS = core_table_assets()
+FASTQC_TABLE_CSS: Final[str] = f"{FASTQC_CSS}\n{_CORE_TABLE_CSS}"
+FASTQC_TABLE_JS: Final[str] = guard_core_table_js(_CORE_TABLE_JS)
+FASTQC_OVERVIEW_CSS: Final[str] = f"{FASTQC_CSS}\n" + load_css(
+    "workflow_coda.core",
+    "assets/markdown.css",
+    distribution="workflow-coda",
+)
 
 
 def _read(
