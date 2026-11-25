@@ -16,6 +16,7 @@ from workflow_coda.icons import IconLibrary, IconSource
 from workflow_coda.manifest import MANIFEST_SCHEMA_VERSION
 
 from coda_bio_plugin.fastqc.components import (
+    FASTQC_COMPONENTS,
     FASTQC_CSS,
     FASTQC_TABLE_CSS,
     FASTQC_TABLE_JS,
@@ -81,36 +82,41 @@ def test_registration() -> None:
     first = get_plugin()
     second = get_plugin()
     assert first is not second
-    assert len(first.components) == 11
-    assert first.components[0].id == "bio.fastqc_overview"
-    assert [item.title for item in first.components[1:]] == list(MODULE_NAMES)
-    assert all(item.chrome is ComponentChrome.CARD for item in first.components)
+
+    fastqc = tuple(
+        item for item in first.components if item.id.startswith("bio.fastqc_")
+    )
+    assert fastqc == FASTQC_COMPONENTS
+    assert len(fastqc) == 11
+    assert fastqc[0].id == "bio.fastqc_overview"
+    assert [item.title for item in fastqc[1:]] == list(MODULE_NAMES)
+    assert all(item.chrome is ComponentChrome.CARD for item in fastqc)
 
     markdown_css = (
         resources.files("workflow_coda.core")
         .joinpath("assets", "markdown.css")
         .read_text(encoding="utf-8")
     )
-    assert first.components[0].css == f"{FASTQC_CSS}\n{markdown_css}"
-    assert first.components[0].js is None
-    assert all(item.css == FASTQC_TABLE_CSS for item in first.components[1:])
+    assert fastqc[0].css == f"{FASTQC_CSS}\n{markdown_css}"
+    assert fastqc[0].js is None
+    assert all(item.css == FASTQC_TABLE_CSS for item in fastqc[1:])
+
     assert _TABLE.css is not None
     assert all(
-        item.css is not None and item.css.endswith(_TABLE.css)
-        for item in first.components[1:]
+        item.css is not None and item.css.endswith(_TABLE.css) for item in fastqc[1:]
     )
-    assert all(item.js == FASTQC_TABLE_JS for item in first.components[1:])
+
+    assert all(item.js == FASTQC_TABLE_JS for item in fastqc[1:])
     assert _TABLE.js is not None
-    assert all(
-        item.js is not None and _TABLE.js in item.js for item in first.components[1:]
-    )
+    assert all(item.js is not None and _TABLE.js in item.js for item in fastqc[1:])
+
     assert "document.currentScript.textContent" in FASTQC_TABLE_JS
     assert 'document.documentElement.classList.add("coda-js")' in FASTQC_TABLE_JS
     assert "bio.fastqc" in [item.format for item in first.artifact_verifiers]
     assert first.metadata.icons_package is None
 
 
-@pytest.mark.parametrize("item", get_plugin().components, ids=lambda item: item.id)
+@pytest.mark.parametrize("item", FASTQC_COMPONENTS, ids=lambda item: item.id)
 def test_every_registered_component_renders_by_default(
     tmp_path: Path, item: Any
 ) -> None:

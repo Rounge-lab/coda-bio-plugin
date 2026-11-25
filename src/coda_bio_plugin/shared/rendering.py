@@ -26,9 +26,10 @@ def parse_parameters(
     parameters: ComponentParameters,
     *,
     supports_table: bool,
+    extra_parameters: frozenset[str] = frozenset(),
 ) -> RenderSpec:
     """Validate common parameters before accessing artifact data."""
-    accepted = _TABLE_PARAMETERS if supports_table else _PARAMETERS
+    accepted = (_TABLE_PARAMETERS if supports_table else _PARAMETERS) | extra_parameters
     reject_unknown_parameters(component_id, parameters, accepted)
 
     def text_parameter(name: str, *, required: bool) -> str | None:

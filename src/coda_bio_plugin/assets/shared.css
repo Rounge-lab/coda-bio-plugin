@@ -1,0 +1,90 @@
+.coda-bio__metadata {
+  margin: 0.75rem 0;
+}
+
+.coda-bio__metadata dt {
+  font-weight: 600;
+}
+
+.coda-bio__metadata dd {
+  margin: 0.15rem 0 0.5rem 1rem;
+}
+
+.coda-bio__caption,
+.coda-bio__empty,
+.coda-bio__explanation {
+  margin: 0.75rem 0;
+  color: var(--coda-muted);
+}
+
+.coda-bio__disclosure {
+  margin-top: 0.75rem;
+}
+
+.coda-bio__disclosure > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+  padding: 0.3rem 0;
+}
+
+.coda-bio__disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.coda-bio__disclosure-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.coda-bio__dropdown {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  margin-left: auto;
+  transition: transform 0.15s ease;
+}
+
+.coda-bio__disclosure[open] > summary > .coda-bio__dropdown {
+  transform: rotate(180deg);
+}
+
+.coda-bio__disclosure > summary:focus-visible {
+  outline: 2px solid var(--coda-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coda-bio__dropdown {
+    transition: none;
+  }
+}
+
+/* Keep an un-tabbed heading visible when table enhancements add coda-js. */
+.coda-js .coda-tabpanel:not([role="tabpanel"]) > h2 {
+  display: block;
+}
+
+@media print {
+  .coda-bio__disclosure,
+  .coda-bio__disclosure > * {
+    display: block;
+    content-visibility: visible;
+  }
+
+  .coda-card-body:has(.coda-bio) {
+    overflow: visible;
+  }
+
+  .coda-bio .coda-table {
+    overflow: visible;
+  }
+
+  .coda-bio .coda-table table {
+    overflow-wrap: anywhere;
+  }
+}
