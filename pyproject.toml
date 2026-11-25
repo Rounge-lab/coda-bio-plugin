@@ -117,7 +117,7 @@ platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
 python = ">=3.14,<3.15"
 
 [tool.pixi.pypi-dependencies]
-workflow-coda = { git = "ssh://git@github.com/sverre-branders/workflow-coda.git", rev = "911dca2" }
+workflow-coda = { git = "ssh://git@github.com/sverre-branders/workflow-coda.git", rev = "ca4a948" }
 coda-bio-plugin = { path = ".", editable = true, extras = ["dev"] }
 
 [tool.pixi.feature.docs.pypi-dependencies]
