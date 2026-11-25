@@ -9,3 +9,7 @@ docs/examples/build/
 .aider.chat.history.md
 .aider.input.history
 .aider.tags.cache*
+.aider.prompt.md
+docs/examples/*/*verified-manifest.json
+*report.html
+/docs/source/_static/previews/

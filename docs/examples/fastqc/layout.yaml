@@ -1,0 +1,52 @@
+schema_version: "0.4.0"
+title: FastQC example
+theme:
+  light: crcbiome-light
+  dark: crcbiome-dark
+tabs:
+  - title: FastQC
+    components:
+      - type: card
+        title: Sample QC
+        children:
+        - type: grid
+          split: [1, 1]
+          children:
+          - id: bio.fastqc_overview
+            parameters:
+              artifact: org.example.fastqc
+          - id: bio.fastqc_basic_statistics
+            parameters:
+              artifact: org.example.fastqc
+        - id: bio.fastqc_per_base_sequence_quality
+          parameters:
+            artifact: org.example.fastqc
+        - type: grid
+          split: [1, 1]
+          children:
+          - id: bio.fastqc_per_sequence_quality_scores
+            parameters:
+              artifact: org.example.fastqc
+          - id: bio.fastqc_per_base_sequence_content
+            parameters:
+              artifact: org.example.fastqc
+          - id: bio.fastqc_per_sequence_gc_content
+            parameters:
+              artifact: org.example.fastqc
+              include_table: true
+          - id: bio.fastqc_per_base_n_content
+            parameters:
+              artifact: org.example.fastqc
+              include_table: true
+          - id: bio.fastqc_sequence_length_distribution
+            parameters:
+              artifact: org.example.fastqc
+          - id: bio.fastqc_sequence_duplication_levels
+            parameters:
+              artifact: org.example.fastqc
+          - id: bio.fastqc_overrepresented_sequences
+            parameters:
+              artifact: org.example.fastqc
+          - id: bio.fastqc_adapter_content
+            parameters:
+              artifact: org.example.fastqc

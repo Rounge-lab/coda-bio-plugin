@@ -1,0 +1,172 @@
+.coda-bio-fastqc__overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 0.75rem;
+  list-style: none;
+  margin: 0.75rem 0;
+  padding: 0;
+}
+
+.coda-bio-fastqc__overview-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid var(--coda-border);
+  border-left-width: 4px;
+  border-radius: 4px;
+  padding: 0.6rem 0.75rem;
+}
+
+.coda-bio-fastqc__overview-item--unavailable {
+  color: var(--coda-muted);
+}
+
+.coda-bio-fastqc__overview-status {
+  white-space: nowrap;
+}
+
+.coda-bio-fastqc__icon {
+  display: inline-flex;
+  vertical-align: -0.1em;
+}
+
+.coda-bio-fastqc__status {
+  display: inline-block;
+  border: 1px solid var(--coda-border);
+  border-left-width: 4px;
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+.coda-bio-fastqc__metadata {
+  margin: 0.75rem 0;
+}
+
+.coda-bio-fastqc__metadata dt {
+  font-weight: 600;
+}
+
+.coda-bio-fastqc__metadata dd {
+  margin: 0.15rem 0 0.5rem 1rem;
+}
+
+.coda-bio-fastqc__disclosure {
+  margin-top: 0.75rem;
+}
+
+.coda-bio-fastqc__disclosure > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+  padding: 0.3rem 0;
+}
+
+.coda-bio-fastqc__disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.coda-bio-fastqc__disclosure-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.coda-bio-fastqc__dropdown {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  margin-left: auto;
+  transition: transform 0.15s ease;
+}
+
+.coda-bio-fastqc__disclosure[open] > summary > .coda-bio-fastqc__dropdown {
+  transform: rotate(180deg);
+}
+
+.coda-bio-fastqc__disclosure > summary:focus-visible {
+  outline: 2px solid var(--coda-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coda-bio-fastqc__dropdown {
+    transition: none;
+  }
+}
+
+.coda-bio-fastqc__counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0.75rem 0;
+  padding: 0;
+}
+
+.coda-bio-fastqc__count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid var(--coda-border);
+  border-left-width: 4px;
+  border-radius: 4px;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+.coda-bio-fastqc__count-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.coda-bio-fastqc__count--unavailable {
+  color: var(--coda-muted);
+}
+
+.coda-bio-fastqc__caption,
+.coda-bio-fastqc__explanation,
+.coda-bio-fastqc__empty {
+  margin: 0.75rem 0;
+  color: var(--coda-muted);
+}
+
+.coda-bio-fastqc__caption,
+.coda-bio-fastqc__explanation {
+  color: var(--coda-muted);
+}
+
+/* The framework omits report.js on a single-tab page. FastQC table
+   enhancements still add coda-js, so keep the un-tabbed panel heading
+   visible rather than applying the framework's scripted-tab hiding rule. */
+.coda-js .coda-tabpanel:not([role="tabpanel"]) > h2 {
+  display: block;
+}
+
+@media print {
+  .coda-bio-fastqc__disclosure,
+  .coda-bio-fastqc__disclosure > * {
+    display: block;
+    content-visibility: visible;
+  }
+
+  /* Core table markup scrolls in the framework card body. Release that
+     clipping for printed FastQC tables and let long cell text wrap. */
+  .coda-card-body:has(.coda-bio-fastqc) {
+    overflow: visible;
+  }
+
+  .coda-bio-fastqc .coda-table {
+    overflow: visible;
+  }
+
+  .coda-bio-fastqc .coda-table table {
+    overflow-wrap: anywhere;
+  }
+}
