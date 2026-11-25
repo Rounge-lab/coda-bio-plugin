@@ -16,6 +16,7 @@ from workflow_coda.components import (
 from workflow_coda.context import RenderContext
 from workflow_coda.core.plugin import _TABLE
 from workflow_coda.errors import ArtifactUnavailableError, PluginAssetError
+from workflow_coda.theme import color_css
 
 from .figures import (
     FigureBuilder,
@@ -153,7 +154,10 @@ def _overview_item(context: RenderContext, name: str, status: str | None) -> str
         )
     icon_name, token, label = STATUS_PRESENTATION[status]
     icon = context.icons.load(icon_name).markup
-    color = html.escape(context.theme.colors[token], quote=True)
+    color = html.escape(
+        color_css(context.theme, "bio.fastqc_overview", token),
+        quote=True,
+    )
     return (
         '<li class="coda-bio-fastqc__overview-item" '
         f'style="border-left-color: {color};">'
@@ -168,7 +172,10 @@ def _overview_counts(context: RenderContext, counts: Counter[str], missing: int)
     items = []
     for status in ("pass", "warn", "fail"):
         _, token, label = STATUS_PRESENTATION[status]
-        color = html.escape(context.theme.colors[token], quote=True)
+        color = html.escape(
+            color_css(context.theme, "bio.fastqc_overview", token),
+            quote=True,
+        )
         items.append(
             '<li class="coda-bio-fastqc__count" '
             f'style="border-left-color: {color};">'
@@ -334,8 +341,12 @@ def _render_chart(
             f"{caption_html(spec.caption)}</div>"
         )
 
-    figure, description = builder(context.theme, module)
-    result = RenderedComponent.from_figure(figure, description=description)
+    figure, description, binding = builder(context.theme, module)
+    result = RenderedComponent.from_figure(
+        figure,
+        description=description,
+        theme=binding,
+    )
     assert result.html is not None
     metadata = module_metadata_html(module)
     disclosure = (

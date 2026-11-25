@@ -30,6 +30,11 @@ DATA_TABLE_TITLE = '<span class="coda-bio-fastqc__disclosure-title">Data table</
 ADDITIONAL_MODULES_TITLE = (
     '<span class="coda-bio-fastqc__disclosure-title">Additional modules</span>'
 )
+NON_CHART_COMPONENTS = {
+    "bio.fastqc_overview",
+    "bio.fastqc_basic_statistics",
+    "bio.fastqc_overrepresented_sequences",
+}
 
 
 def context(
@@ -59,7 +64,8 @@ def context(
     path.write_text(json.dumps(manifest), encoding="utf-8")
     sources = (IconSource.for_plugin("core", "workflow_coda.core"),) if icons else ()
     return RenderContext(
-        store=ArtifactStore.from_manifest_file(path), icons=IconLibrary(sources)
+        store=ArtifactStore.from_manifest_file(path),
+        icons=IconLibrary(sources),
     )
 
 
@@ -110,10 +116,12 @@ def test_every_registered_component_renders_by_default(
 ) -> None:
     ctx = context(tmp_path, EXAMPLE.read_text(encoding="utf-8"))
     result = item.render(ctx, PlacementInfo(title="Ignored"), {"artifact": TYPE})
+
     assert result.status is ComponentStatus.OK
     assert result.html is not None
     assert "Ignored" not in result.html
     assert DATA_TABLE_TITLE not in result.html
+
     if item.id == "bio.fastqc_basic_statistics":
         assert "<table" in result.html
         assert "VC1_1.fastq.gz" in result.html
@@ -122,16 +130,15 @@ def test_every_registered_component_renders_by_default(
         assert 'data-key="Measure"' in result.html
         assert 'data-type="text"' in result.html
         assert 'data-key="Value"' in result.html
-        assert 'data-type="text"' in result.html
     else:
         assert "<table" not in result.html
-    if item.id not in {
-        "bio.fastqc_overview",
-        "bio.fastqc_basic_statistics",
-        "bio.fastqc_overrepresented_sequences",
-    }:
+
+    if item.id not in NON_CHART_COMPONENTS:
         assert 'class="coda-figure"' in result.html
         assert 'aria-label="' in result.html
+        assert result.html.count('data-coda-figure-theme="') == 1
+    else:
+        assert "data-coda-figure-theme" not in result.html
 
 
 @pytest.mark.parametrize(
@@ -167,10 +174,12 @@ def test_optional_table_for_chart_and_table_components(
     if include_table:
         parameters["include_table"] = True
     outcome = render(ctx, id_, parameters)
+
     assert outcome.status is ComponentStatus.OK
     assert outcome.html is not None
     if id_ == "bio.fastqc_per_base_n_content":
         assert 'class="coda-figure"' in outcome.html
+        assert outcome.html.count('data-coda-figure-theme="') == 1
     if include_table:
         if id_ == "bio.fastqc_per_base_n_content":
             assert DATA_TABLE_TITLE in outcome.html
@@ -277,13 +286,17 @@ def test_empty_modules_table_options_and_no_plotly_import(
         parameters["include_table"] = True
 
     outcome = render(ctx, component_id, parameters)
+
     assert outcome.status is ComponentStatus.OK
     assert outcome.html is not None
     assert "Warn" in outcome.html
+    assert "border-left-color: var(--coda-warning);" in outcome.html
     assert "This module contains no data rows." in outcome.html
     assert ("<table" in outcome.html) is (include_table and has_header)
     assert ("Total Deduplicated Percentage" in outcome.html) is has_metadata
     assert ("<th scope=" in outcome.html) is (include_table and has_header)
+    assert 'class="coda-figure"' not in outcome.html
+    assert "data-coda-figure-theme" not in outcome.html
     if include_table and has_header:
         assert 'class="coda-table__controls"' in outcome.html
         assert "coda-table__sort-icon" in outcome.html
@@ -304,7 +317,6 @@ def test_basic_statistics_always_shows_empty_notice_and_available_header(
 ) -> None:
     text = f"##FastQC\t1\n>>Basic Statistics\twarn\n{body}>>END_MODULE\n"
     ctx = context(tmp_path, text)
-
     outcome = render(ctx, "bio.fastqc_basic_statistics", {"artifact": TYPE})
 
     assert outcome.status is ComponentStatus.OK
@@ -325,6 +337,7 @@ def test_format_and_parse_failures(tmp_path: Path) -> None:
     ctx = context(tmp_path, "bad", fmt="txt")
     with pytest.raises(ValueError, match="expected 'bio.fastqc'"):
         render(ctx, "bio.fastqc_basic_statistics", {"artifact": TYPE})
+
     ctx = context(tmp_path, "bad")
     with pytest.raises(ArtifactReadError, match="fastqc") as caught:
         render(ctx, "bio.fastqc_basic_statistics", {"artifact": TYPE})
@@ -335,11 +348,13 @@ def test_unavailable_and_missing_modules(tmp_path: Path) -> None:
     ctx = context(tmp_path, "bad", status="failed", icons=False)
     outcome = render(ctx, "bio.fastqc_overview", {"artifact": TYPE})
     assert outcome.status is ComponentStatus.UNAVAILABLE
+
     ctx = context(tmp_path, "##FastQC\t1\n")
     outcome = render(ctx, "bio.fastqc_basic_statistics", {"artifact": TYPE})
     assert outcome.status is ComponentStatus.UNAVAILABLE
     assert outcome.message is not None
     assert "carries no module 'Basic Statistics'" in outcome.message
+
     outcome = render(ctx, "bio.fastqc_overview", {"artifact": "org.example.absent"})
     assert outcome.status is ComponentStatus.UNAVAILABLE
 
@@ -354,11 +369,13 @@ def test_overview_counts_order_and_additional_modules(tmp_path: Path) -> None:
     )
     ctx = context(tmp_path, text)
     outcome = render(ctx, "bio.fastqc_overview", {"artifact": TYPE})
+
     assert outcome.status is ComponentStatus.OK
     assert outcome.html is not None
     page = outcome.html
     assert "1&lt;&amp;" in page
     assert '<div class="coda-prose"><div><hr></div></div>' in page
+
     start = page.index(
         '<ul class="coda-bio-fastqc__counts" '
         'aria-label="Standard module status counts">'
@@ -373,13 +390,14 @@ def test_overview_counts_order_and_additional_modules(tmp_path: Path) -> None:
     )
     positions = [counts.index(label) for label in expected]
     assert positions == sorted(positions)
+
     # Three reported-status icons plus the additional-modules dropdown.
     assert page.count('class="coda-icon"') == 4
     assert page.index("Basic Statistics") < page.index("Per base sequence quality")
     assert page.index("Per base N content") < page.index("Adapter Content")
     assert ADDITIONAL_MODULES_TITLE in page
     assert (
-        f'<span class="coda-bio-fastqc__dropdown">'
+        '<span class="coda-bio-fastqc__dropdown">'
         f"{ctx.icons.load('core-dropdown').markup}</span>"
     ) in page
     assert "Extra &lt;module&gt;: Warn" in page
@@ -404,7 +422,7 @@ def test_status_borders_keep_neutral_border_and_color_left_edge(
 ) -> None:
     text = f"##FastQC\t1\n>>Basic Statistics\t{status}\n>>END_MODULE\n"
     ctx = context(tmp_path, text)
-    expected_color = ctx.theme.colors[token]
+    expected_color = f"var(--coda-{token})"
     expected_left_border = f"border-left-color: {expected_color};"
 
     badge = render(ctx, "bio.fastqc_basic_statistics", {"artifact": TYPE})
@@ -424,19 +442,20 @@ def test_status_borders_keep_neutral_border_and_color_left_edge(
         f'<span class="coda-bio-fastqc__icon" style="color: {expected_color};">'
     ) in overview.html
 
+    count_tokens = {
+        "Pass": "success",
+        "Warn": "warning",
+        "Fail": "danger",
+    }
     for count_label, count in counts.items():
-        _, count_token, _ = {
-            "Pass": ("core-check", "success", "Pass"),
-            "Warn": ("core-info", "warning", "Warn"),
-            "Fail": ("core-warning", "danger", "Fail"),
-        }[count_label]
-        count_color = ctx.theme.colors[count_token]
+        count_color = f"var(--coda-{count_tokens[count_label]})"
         assert (
             '<li class="coda-bio-fastqc__count" '
             f'style="border-left-color: {count_color};">'
             f'<span class="coda-bio-fastqc__count-value">{count}</span> '
             f"{count_label}</li>"
         ) in overview.html
+
     assert (
         '<li class="coda-bio-fastqc__count '
         'coda-bio-fastqc__count--unavailable">'
@@ -466,6 +485,7 @@ def test_escaped_complete_table_and_caption(tmp_path: Path) -> None:
         "bio.fastqc_basic_statistics",
         {"artifact": TYPE, "caption": "<caption>&"},
     )
+
     assert outcome.html is not None
     assert "Extra &lt;header&gt;" in outcome.html
     assert "&lt;a&amp;b&gt;" in outcome.html
@@ -490,6 +510,7 @@ def test_chart_disclosure_contains_complete_escaped_table(tmp_path: Path) -> Non
         "bio.fastqc_per_base_n_content",
         {"artifact": TYPE, "include_table": True},
     )
+
     assert outcome.html is not None
     assert DATA_TABLE_TITLE in outcome.html
     assert (
@@ -497,13 +518,14 @@ def test_chart_disclosure_contains_complete_escaped_table(tmp_path: Path) -> Non
         f"{disclosure_summary_html(ctx, 'Data table')}"
     ) in outcome.html
     assert (
-        f'<span class="coda-bio-fastqc__dropdown">'
+        '<span class="coda-bio-fastqc__dropdown">'
         f"{ctx.icons.load('core-dropdown').markup}</span>"
     ) in outcome.html
     assert "Extra &lt;header&gt;" in outcome.html
     assert "&lt;a&amp;b&gt;" in outcome.html
     assert 'class="coda-table__controls"' in outcome.html
     assert "coda-table__sort-icon" in outcome.html
+    assert outcome.html.count('data-coda-figure-theme="') == 1
 
 
 def test_stylesheet_has_print_rules() -> None:
@@ -521,7 +543,6 @@ def test_disclosure_summary_embeds_sanitized_icon_and_escapes_title(
 ) -> None:
     ctx = context(tmp_path, "##FastQC\t1\n")
     icon = ctx.icons.load("core-dropdown").markup
-
     markup = disclosure_summary_html(ctx, "Data <table> & values")
 
     assert markup == (
@@ -544,7 +565,6 @@ def test_overview_without_additional_modules_has_no_dropdown(
         tmp_path,
         "##FastQC\t1\n>>Basic Statistics\tpass\n>>END_MODULE\n",
     )
-
     outcome = render(ctx, "bio.fastqc_overview", {"artifact": TYPE})
 
     assert outcome.status is ComponentStatus.OK
@@ -569,3 +589,31 @@ def test_disclosure_styles_use_native_open_state() -> None:
     assert "transform: rotate(180deg)" in FASTQC_CSS
     assert "prefers-reduced-motion: reduce" in FASTQC_CSS
     assert component("bio.fastqc_overview").js is None
+
+
+def test_fastqc_table_uses_unrestricted_core_table_policy(
+    tmp_path: Path,
+) -> None:
+    ctx = context(
+        tmp_path,
+        "##FastQC\t1\n"
+        ">>Basic Statistics\tpass\n"
+        "#Measure\tValue\n"
+        "Filename\tsample.fastq.gz\n"
+        ">>END_MODULE\n",
+    )
+    outcome = render(
+        ctx,
+        "bio.fastqc_basic_statistics",
+        {"artifact": TYPE, "caption": "Author caption"},
+    )
+
+    assert outcome.html is not None
+    assert '<div class="coda-table" data-copy-rows="all">' in outcome.html
+    assert 'class="coda-table__viewport"' in outcome.html
+    assert "data-max-visible-rows" not in outcome.html
+    assert "coda-table--fixed-widths" not in outcome.html
+    assert "<colgroup>" not in outcome.html
+    assert "coda-table__caption" not in outcome.html
+    assert ('<p class="coda-bio-fastqc__caption">Author caption</p>') in outcome.html
+    assert outcome.html.count("Author caption") == 1

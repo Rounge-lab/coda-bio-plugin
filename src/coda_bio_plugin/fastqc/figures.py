@@ -2,6 +2,10 @@
 
 The figures use the aggregated values in the artifact as supplied. No
 observations, theoretical distributions, or QC judgments are invented.
+
+Each builder constructs figure data once and returns paired presentation
+updates for light and dark mode. Theme changes preserve axis policy,
+supplied data, and reader interaction state.
 """
 
 import html
@@ -9,9 +13,10 @@ import math
 from collections.abc import Callable
 from typing import Any, Protocol
 
+from workflow_coda.artifact_store import JsonValue
 from workflow_coda.components import SupportsToHtml
 from workflow_coda.errors import RenderError
-from workflow_coda.theme import Theme
+from workflow_coda.theme import FigureStyle, FigureTheme, Theme, ThemePair
 
 from .parser import FastqcModule
 from .rendering import STATUS_PRESENTATION
@@ -23,6 +28,11 @@ class SupportsPlotlyFigure(SupportsToHtml, Protocol):
     """A renderable Plotly-compatible figure."""
 
     def to_plotly_json(self) -> dict[str, Any]: ...
+
+
+type FigureResult = tuple[SupportsPlotlyFigure, str, FigureTheme]
+type TraceUpdates = tuple[dict[str, JsonValue], ...]
+type TraceStyler = Callable[[Theme], TraceUpdates]
 
 
 def _plotly() -> Any:
@@ -59,6 +69,7 @@ def _status_color(theme: Theme, module: FastqcModule) -> str:
 
 
 def _style(figure: Any, theme: Theme, x_title: str, y_title: str) -> None:
+    """Initialize presentation and axis policy for one figure."""
     border = theme.colors["border"]
     axis = {
         "showgrid": False,
@@ -79,6 +90,87 @@ def _style(figure: Any, theme: Theme, x_title: str, y_title: str) -> None:
     )
 
 
+def _layout_updates(theme: Theme) -> dict[str, JsonValue]:
+    """Presentation updates only; preserve axis policy and reader state."""
+    border = theme.colors["border"]
+    return {
+        "paper_bgcolor": "rgba(0, 0, 0, 0)",
+        "plot_bgcolor": "rgba(0, 0, 0, 0)",
+        "font.family": theme.font_body,
+        "font.color": theme.text_on(theme.colors["surface"]),
+        "xaxis.gridcolor": border,
+        "xaxis.linecolor": border,
+        "xaxis.zerolinecolor": border,
+        "yaxis.gridcolor": border,
+        "yaxis.linecolor": border,
+        "yaxis.zerolinecolor": border,
+    }
+
+
+def _binding(
+    pair: ThemePair,
+    trace_style: TraceStyler,
+    *,
+    quality_bands: bool = False,
+) -> FigureTheme:
+    """Resolve identical update structure independently for both modes."""
+
+    def style(theme: Theme) -> FigureStyle:
+        layout = _layout_updates(theme)
+        if quality_bands:
+            for index, token in enumerate(("danger", "warning", "success")):
+                layout[f"shapes[{index}].fillcolor"] = theme.colors[token]
+        return FigureStyle(layout=layout, traces=trace_style(theme))
+
+    return FigureTheme(light=style(pair.light), dark=style(pair.dark))
+
+
+def _quality_trace_updates(theme: Theme) -> TraceUpdates:
+    """Match the quality box followed by the reported mean trace."""
+    ink = theme.text_on(theme.colors["surface"])
+    return (
+        {
+            "line.color": ink,
+            "fillcolor": "rgba(0, 0, 0, 0)",
+        },
+        {
+            "marker.color": ink,
+            "line.color": theme.series[1],
+        },
+    )
+
+
+def _duplication_trace_updates(theme: Theme) -> TraceUpdates:
+    """Match the two grouped duplication traces in declaration order."""
+    return (
+        {"marker.color": theme.series[0]},
+        {"marker.color": theme.series[1]},
+    )
+
+
+def _bar_trace_updates(theme: Theme, module: FastqcModule) -> TraceUpdates:
+    """One trace colored by the producer's reported status."""
+    return ({"marker.color": _status_color(theme, module)},)
+
+
+def _heatmap_trace_updates(theme: Theme, module: FastqcModule) -> TraceUpdates:
+    """One percentage heatmap, including its colorbar presentation."""
+    ink = theme.text_on(theme.colors["surface"])
+    return (
+        {
+            "colorscale": [
+                [0, theme.colors["surface"]],
+                [1, _status_color(theme, module)],
+            ],
+            "colorbar.tickfont.color": ink,
+            "colorbar.tickfont.family": theme.font_body,
+            "colorbar.title.font.color": ink,
+            "colorbar.title.font.family": theme.font_body,
+            "colorbar.outlinecolor": theme.colors["border"],
+        },
+    )
+
+
 def _description(module: FastqcModule, kind: str, subject: str) -> str:
     return (
         f"{kind} of {subject}, {len(module.rows)} supplied bins; "
@@ -87,10 +179,11 @@ def _description(module: FastqcModule, kind: str, subject: str) -> str:
 
 
 def build_per_base_sequence_quality(
-    theme: Theme, module: FastqcModule
-) -> tuple[SupportsPlotlyFigure, str]:
+    pair: ThemePair, module: FastqcModule
+) -> FigureResult:
     """Precomputed quality boxes and the reported mean line."""
     go = _plotly()
+    theme = pair.light
     bins = _labels(module, "Base")
     q1 = _numbers(module, "Lower Quartile")
     median = _numbers(module, "Median")
@@ -146,13 +239,18 @@ def build_per_base_sequence_quality(
     _style(figure, theme, "Base", "Quality score")
     figure.update_xaxes(type="category", categoryorder="array", categoryarray=bins)
     figure.update_yaxes(range=[low, high])
-    return figure, _description(
+    description = _description(
         module, "Box plot and mean line", "per-base sequence quality"
+    )
+    return (
+        figure,
+        description,
+        _binding(pair, _quality_trace_updates, quality_bands=True),
     )
 
 
 def _bar(
-    theme: Theme,
+    pair: ThemePair,
     module: FastqcModule,
     *,
     x_column: str,
@@ -164,8 +262,9 @@ def _bar(
     y_range: AxisRange | None = None,
     x_fixed: bool = False,
     y_fixed: bool = False,
-) -> tuple[SupportsPlotlyFigure, str]:
+) -> FigureResult:
     go = _plotly()
+    theme = pair.light
 
     x: list[str] | list[float]
     x = _labels(module, x_column) if categorical else _numbers(module, x_column)
@@ -200,14 +299,18 @@ def _bar(
     if count:
         description += f"; sum of reported counts: {math.fsum(y)}"
 
-    return figure, description
+    return (
+        figure,
+        description,
+        _binding(pair, lambda mode: _bar_trace_updates(mode, module)),
+    )
 
 
 def build_per_sequence_quality_scores(
-    theme: Theme, module: FastqcModule
-) -> tuple[SupportsPlotlyFigure, str]:
+    pair: ThemePair, module: FastqcModule
+) -> FigureResult:
     return _bar(
-        theme,
+        pair,
         module,
         x_column="Quality",
         y_column="Count",
@@ -220,10 +323,10 @@ def build_per_sequence_quality_scores(
 
 
 def build_per_sequence_gc_content(
-    theme: Theme, module: FastqcModule
-) -> tuple[SupportsPlotlyFigure, str]:
+    pair: ThemePair, module: FastqcModule
+) -> FigureResult:
     return _bar(
-        theme,
+        pair,
         module,
         x_column="GC Content",
         y_column="Count",
@@ -234,11 +337,9 @@ def build_per_sequence_gc_content(
     )
 
 
-def build_per_base_n_content(
-    theme: Theme, module: FastqcModule
-) -> tuple[SupportsPlotlyFigure, str]:
+def build_per_base_n_content(pair: ThemePair, module: FastqcModule) -> FigureResult:
     return _bar(
-        theme,
+        pair,
         module,
         x_column="Base",
         y_column="N-Count",
@@ -249,10 +350,10 @@ def build_per_base_n_content(
 
 
 def build_sequence_length_distribution(
-    theme: Theme, module: FastqcModule
-) -> tuple[SupportsPlotlyFigure, str]:
+    pair: ThemePair, module: FastqcModule
+) -> FigureResult:
     return _bar(
-        theme,
+        pair,
         module,
         x_column="Length",
         y_column="Count",
@@ -264,9 +365,10 @@ def build_sequence_length_distribution(
 
 
 def build_sequence_duplication_levels(
-    theme: Theme, module: FastqcModule
-) -> tuple[SupportsPlotlyFigure, str]:
+    pair: ThemePair, module: FastqcModule
+) -> FigureResult:
     go = _plotly()
+    theme = pair.light
     labels = _labels(module, "Duplication Level")
     names = ("Percentage of deduplicated", "Percentage of total")
     figure = go.Figure()
@@ -284,18 +386,20 @@ def build_sequence_duplication_levels(
     figure.update_xaxes(type="category", categoryorder="array", categoryarray=labels)
     description = _description(module, "Grouped bar chart", "sequence duplication")
     description += f"; {len(names)} series: {', '.join(names)}"
-    return figure, description
+    return figure, description, _binding(pair, _duplication_trace_updates)
 
 
 def _heatmap(
-    theme: Theme,
+    pair: ThemePair,
     module: FastqcModule,
     *,
     bin_column: str,
     names: tuple[str, ...],
     subject: str,
-) -> tuple[SupportsPlotlyFigure, str]:
+) -> FigureResult:
     go = _plotly()
+    theme = pair.light
+    ink = theme.text_on(theme.colors["surface"])
     bins = _labels(module, bin_column)
     series = [html.escape(name) for name in names]
     figure = go.Figure(
@@ -309,7 +413,14 @@ def _heatmap(
                 [0, theme.colors["surface"]],
                 [1, _status_color(theme, module)],
             ],
-            colorbar={"title": {"text": "Percent"}},
+            colorbar={
+                "title": {
+                    "text": "Percent",
+                    "font": {"color": ink, "family": theme.font_body},
+                },
+                "tickfont": {"color": ink, "family": theme.font_body},
+                "outlinecolor": theme.colors["border"],
+            },
             hovertemplate="Series: %{y}<br>Bin: %{x}<br>Percent: %{z}<extra></extra>",
         )
     )
@@ -318,14 +429,18 @@ def _heatmap(
     figure.update_yaxes(type="category", categoryorder="array", categoryarray=series)
     description = _description(module, "Percentage heatmap", subject)
     description += f"; {len(names)} series: {', '.join(names)}"
-    return figure, description
+    return (
+        figure,
+        description,
+        _binding(pair, lambda mode: _heatmap_trace_updates(mode, module)),
+    )
 
 
 def build_per_base_sequence_content(
-    theme: Theme, module: FastqcModule
-) -> tuple[SupportsPlotlyFigure, str]:
+    pair: ThemePair, module: FastqcModule
+) -> FigureResult:
     return _heatmap(
-        theme,
+        pair,
         module,
         bin_column="Base",
         names=("G", "A", "T", "C"),
@@ -333,11 +448,9 @@ def build_per_base_sequence_content(
     )
 
 
-def build_adapter_content(
-    theme: Theme, module: FastqcModule
-) -> tuple[SupportsPlotlyFigure, str]:
+def build_adapter_content(pair: ThemePair, module: FastqcModule) -> FigureResult:
     return _heatmap(
-        theme,
+        pair,
         module,
         bin_column="Position",
         names=module.header[1:],
@@ -345,4 +458,4 @@ def build_adapter_content(
     )
 
 
-type FigureBuilder = Callable[[Theme, FastqcModule], tuple[SupportsPlotlyFigure, str]]
+type FigureBuilder = Callable[[ThemePair, FastqcModule], FigureResult]

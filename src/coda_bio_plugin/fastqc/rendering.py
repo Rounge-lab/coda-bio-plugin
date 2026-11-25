@@ -11,9 +11,11 @@ from workflow_coda.core.table import (
     _controls_bar,
     _RenderedTable,
     _sort_icons_html,
+    _TableSpec,
 )
 from workflow_coda.errors import ArtifactReadError
 from workflow_coda.text import has_visible_text
+from workflow_coda.theme import color_css
 
 from .parser import FastqcModule, FastqcParseError, FastqcReport, parse_fastqc
 
@@ -115,7 +117,10 @@ def missing_module_message(component_id: str, spec: RenderSpec, name: str) -> st
 def status_badge(context: RenderContext, status: str) -> str:
     """Render the reported status as visible text with a themed border."""
     _, token, label = STATUS_PRESENTATION[status]
-    color = html.escape(context.theme.colors[token], quote=True)
+    color = html.escape(
+        color_css(context.theme, "bio.fastqc", token),
+        quote=True,
+    )
     return (
         '<span class="coda-bio-fastqc__status" '
         f'style="border-left-color: {color};">{html.escape(label)}</span>'
@@ -134,21 +139,35 @@ def table_html(
     headers: tuple[str, ...],
     rows: tuple[tuple[str, ...], ...],
 ) -> str:
-    """Assemble a complete table using workflow-coda's core table helpers.
+    """Assemble an unrestricted table using the installed core helpers.
 
-    This deliberately uses private core helpers so FastQC tables share the
-    installed core table's controls, sort affordances, escaping, and markup.
-    That is a version-coupled integration: test it whenever workflow-coda is
-    upgraded.
+    FastQC supplies already-parsed headers and rows, preserving every
+    column and cell. The table has no width or viewport restriction,
+    copies all filter matches, and leaves captions to FastQC's wrapper.
+
+    This private-helper integration is version-coupled and must be
+    tested whenever workflow-coda is upgraded.
     """
     if not headers:
         return ""
+
     rendered = _RenderedTable(labels=headers, rows=rows)
+    spec = _TableSpec(
+        artifact_type="bio.fastqc",
+        sep="\t",
+        header=True,
+        columns=None,
+        caption=None,
+        column_widths=None,
+        max_visible_rows=None,
+        copy_rows="all",
+    )
     return _assemble_markup(
         rendered,
-        caption=None,
+        spec=spec,
         sort_icons=_sort_icons_html(context),
         controls_bar=_controls_bar(context),
+        column_group="",
     )
 
 
