@@ -8,7 +8,7 @@ from .fastp.verifier import FASTP_VERIFIER
 from .fastqc.components import FASTQC_COMPONENTS
 from .fastqc.verifier import FASTQC_VERIFIER
 
-SUPPORTED_MANIFEST_SCHEMA_VERSIONS = {"0.3.0"}
+SUPPORTED_MANIFEST_SCHEMA_VERSIONS = {"0.4.0"}
 
 
 def get_plugin() -> ReportPlugin:
